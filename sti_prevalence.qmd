@@ -1,0 +1,533 @@
+
+```{r}
+#| message: false
+#| echo: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 10
+
+
+syphlis <- rio::import("data/Results/STI Analysis Results_01102024.xlsx",
+                         sheet = "Syphilis-Active") |>
+  mutate(typo = case_when(is.na(Typology) ~ "All",
+                          TRUE ~ Typology),
+         county = case_when(is.na(County) ~ "All",
+                            TRUE ~ County) 
+         ) |>
+  mutate(
+  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
+  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
+  ) |>
+filter(typo != "All") %>%
+  select(-Typology, -County) %>%
+  mutate(
+    label = paste0(round(point, 1), 
+                        " (", round(lower,1), "-", round(upper,1), ")"),
+    point = point/100,
+    lower = lower/100,
+    upper = upper/100
+  )
+
+
+
+
+# Filter and prepare the data
+filtered_data <- syphlis %>%
+  rename(COUNTY = county) %>%
+  filter(COUNTY == county) %>%
+  filter(!is.na(point)) %>%
+  filter(Syphilis == "Active Infection")
+
+# Narrative
+highest_syphilis <- filtered_data %>% arrange(desc(point)) %>% slice_head(n=1) 
+highest_syphilis_val <- highest_syphilis %>% pull(point)
+highest_syphilis_typo <- highest_syphilis %>% pull(typo)
+
+# Calculate the maximum percentage and add a buffer
+max_percentage <- max(filtered_data$point, na.rm = TRUE)
+buffer <- 0.05 # You can adjust the buffer value as needed
+
+# Define the directory and the full file path
+directory <- "data/Results/charts/sti/"
+syphilis_by_kp_age_file_path <- paste0(directory, county, "_syphilis_plot.png")
+
+# Check if the directory exists
+if (!dir.exists(directory)) {
+  # Create the directory if it does not exist
+  dir.create(directory, recursive = TRUE)
+}
+
+# Check if there are records to plot
+if (nrow(filtered_data) > 0) {
+  
+
+  # Create the plot
+  plot_syphilis <- ggplot(filtered_data,aes(x = reorder(typo,-point), 
+                                    y = point,
+                                    fill = typo, color = typo)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1), 
+                       limits = c(0, max_percentage + buffer)) +
+    geom_bar(stat = "identity", position = "dodge") +  
+    #geom_errorbar(aes(ymin = supp_wgt_lcl, ymax = point), width = 0.2, color = "black") +  
+    #facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    labs(y = element_blank(),
+         x = element_blank()) +
+    theme_minimal() +
+    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
+            position = position_dodge(width = 0.9), vjust = -0.5, color = "black", size = 3, fontface = "bold") +
+    scale_fill_manual(values = custom_colors) +
+    scale_color_manual(values = custom_colors) +  
+    theme(
+      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
+      strip.text = element_text(face = "bold", size = 10),  
+      axis.title = element_text(size = 10),  
+      axis.text = element_text(size = 10),
+      axis.text.y = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      panel.grid = element_blank()
+    )
+
+  
+  # Save the plot as an image in the specified directory
+  ggsave(filename = syphilis_by_kp_age_file_path, plot = plot_syphilis, width = 3, height = 2, dpi = 300)
+  
+} else {
+  message("No records to plot")
+}
+
+  
+  
+  
+```
+
+```{r}
+#| message: false
+#| echo: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 10
+
+
+hebB <- rio::import("data/Results/STI Analysis Results_01102024.xlsx",
+                         sheet = "Hepatitis B-Active") |>
+  mutate(typo = case_when(is.na(Typology) ~ "All",
+                          TRUE ~ Typology),
+         county = case_when(is.na(County) ~ "All",
+                            TRUE ~ County) 
+         ) |>
+  mutate(
+  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
+  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
+  ) |>
+filter(typo != "All") %>%
+  select(-Typology, -County) %>%
+  mutate(
+    label = paste0(round(point, 1), 
+                        " (", round(lower,1), "-", round(upper,1), ")"),
+    point = point/100,
+    lower = lower/100,
+    upper = upper/100
+  )
+
+
+
+
+# Filter and prepare the data
+filtered_data <- hebB %>%
+  rename(COUNTY = county) %>%
+  filter(COUNTY == county) %>%
+  filter(!is.na(point)) %>%
+  filter(`Hep B Active Infection` == "Active Infection")
+
+hebB_typos <- filtered_data %>% pull(typo)
+
+# Narrative
+hebB_screened <- sum(hebB$n[hebB$`Hep B Active Infection` == "Active Infection" |
+                            hebB$`Hep B Active Infection` == "Not Active Infection"], na.rm = TRUE)
+
+hebB_pos <- sum(filtered_data$n, na.rm = TRUE)
+hebB_per <- scales::label_percent(accuracy = 0.1)(hebB_pos/hebB_screened)
+
+# Calculate the maximum percentage and add a buffer
+max_percentage <- max(filtered_data$point, na.rm = TRUE)
+buffer <- 0.05 # You can adjust the buffer value as needed
+
+# Define the directory and the full file path
+directory <- "data/Results/charts/sti/"
+hebB_by_kp_age_file_path <- paste0(directory, county, "_hebB_plot.png")
+
+# Check if the directory exists
+if (!dir.exists(directory)) {
+  # Create the directory if it does not exist
+  dir.create(directory, recursive = TRUE)
+}
+
+# Check if there are records to plot
+if (nrow(filtered_data) > 0) {
+  
+
+  # Create the plot
+  plot_hebB <- ggplot(filtered_data, aes(x = reorder(typo,-point), 
+                                    y = point,
+                                    fill = typo, color = typo)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1), 
+                       limits = c(0, max_percentage + buffer)) +
+    geom_bar(stat = "identity", position = "dodge") +  
+    #geom_errorbar(aes(ymin = supp_wgt_lcl, ymax = point), width = 0.2, color = "black") +  
+    #facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    labs(y = element_blank(),
+         x = element_blank()) +
+    theme_minimal() +
+    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
+            position = position_dodge(width = 0.9), vjust = -0.5, color = "black", size = 3, fontface = "bold") +
+    scale_fill_manual(values = custom_colors) +
+    scale_color_manual(values = custom_colors) +  
+    theme(
+      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
+      strip.text = element_text(face = "bold", size = 10),  
+      axis.title = element_text(size = 10),  
+      axis.text = element_text(size = 10),
+      axis.text.y = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      panel.grid = element_blank()
+    )
+
+  
+  # Save the plot as an image in the specified directory
+  ggsave(filename = hebB_by_kp_age_file_path, plot = plot_hebB, width = 3, height = 2, dpi = 300)
+  
+} else {
+  message("No records to plot")
+}
+
+  
+  
+  
+```
+
+
+```{r}
+#| message: false
+#| echo: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 10
+
+
+hebC <- rio::import("data/Results/STI Analysis Results_01102024.xlsx",
+                         sheet = "Hepatitis C-Active") |>
+  mutate(typo = case_when(is.na(Typology) ~ "All",
+                          TRUE ~ Typology),
+         county = case_when(is.na(County) ~ "All",
+                            TRUE ~ County) 
+         ) |>
+  mutate(
+  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
+  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
+  ) |>
+filter(typo != "All") %>%
+  select(-Typology, -County) %>%
+  mutate(
+    label = paste0(round(point, 1), 
+                        " (", round(lower,1), "-", round(upper,1), ")"),
+    point = point/100,
+    lower = lower/100,
+    upper = upper/100
+  )
+
+
+
+
+# Filter and prepare the data
+filtered_data <- hebC %>%
+  rename(COUNTY = county) %>%
+  filter(COUNTY == county) %>%
+  filter(!is.na(point)) %>%
+  filter(`Hep C Active Infection` == "Active Infection")
+
+hebC_typos <- filtered_data %>% pull(typo)
+
+# Narrative
+hebC_screened <- sum(hebC$n[hebC$`Hep C Active Infection` == "Active Infection" |
+                            hebC$`Hep C Active Infection` == "Not Active Infection"], na.rm = TRUE)
+
+hebC_pos <- sum(filtered_data$n, na.rm = TRUE)
+hebC_per <- scales::label_percent(accuracy = 0.1)(hebC_pos/hebC_screened)
+
+# Calculate the maximum percentage and add a buffer
+max_percentage <- max(filtered_data$point, na.rm = TRUE)
+buffer <- 0.05 # You can adjust the buffer value as needed
+
+# Define the directory and the full file path
+directory <- "data/Results/charts/sti/"
+hebC_by_kp_age_file_path <- paste0(directory, county, "_hebC_plot.png")
+
+# Check if the directory exists
+if (!dir.exists(directory)) {
+  # Create the directory if it does not exist
+  dir.create(directory, recursive = TRUE)
+}
+
+# Check if there are records to plot
+if (nrow(filtered_data) > 0) {
+  
+
+  # Create the plot
+  plot_hebC <- ggplot(filtered_data, aes(x = reorder(typo,-point), 
+                                    y = point,
+                                    fill = typo, color = typo)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1), 
+                       limits = c(0, max_percentage + buffer)) +
+    geom_bar(stat = "identity", position = "dodge") +  
+    #geom_errorbar(aes(ymin = supp_wgt_lcl, ymax = point), width = 0.2, color = "black") +  
+    #facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    labs(y = element_blank(),
+         x = element_blank()) +
+    theme_minimal() +
+    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
+            position = position_dodge(width = 0.9), vjust = -0.5, color = "black", size = 3, fontface = "bold") +
+    scale_fill_manual(values = custom_colors) +
+    scale_color_manual(values = custom_colors) +  
+    theme(
+      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
+      strip.text = element_text(face = "bold", size = 10),  
+      axis.title = element_text(size = 10),  
+      axis.text = element_text(size = 10),
+      axis.text.y = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      panel.grid = element_blank()
+    )
+
+  
+  # Save the plot as an image in the specified directory
+  ggsave(filename = hebC_by_kp_age_file_path, plot = plot_hebC, width = 3, height = 2, dpi = 300)
+  
+} else {
+  message("No records to plot")
+}
+  
+  
+```
+
+
+
+```{r}
+#| message: false
+#| echo: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 10
+
+
+chlamydia <- rio::import("data/Results/STI Analysis Results_01102024.xlsx",
+                         sheet = "Chlamydia") |>
+  mutate(typo = case_when(is.na(Typology) ~ "All",
+                          TRUE ~ Typology),
+         county = case_when(is.na(County) ~ "All",
+                            TRUE ~ County) 
+         ) |>
+  mutate(
+  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
+  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
+  ) |>
+filter(typo != "All") %>%
+  select(-Typology, -County) %>%
+  mutate(
+    label = paste0(round(point, 1), 
+                        " (", round(lower,1), "-", round(upper,1), ")"),
+    point = point/100,
+    lower = lower/100,
+    upper = upper/100
+  )
+
+
+
+
+# Filter and prepare the data
+filtered_data <- chlamydia %>%
+  rename(COUNTY = county) %>%
+  filter(COUNTY == county) %>%
+  filter(!is.na(point)) %>%
+  filter(Chlamydia == "Positive")
+
+chlamydia_typos <- filtered_data %>% pull(typo)
+
+# Narrative
+highest_chlamydia <- filtered_data %>% arrange(desc(point)) %>% slice_head(n=1) 
+highest_chlamydia_val <- highest_chlamydia %>% pull(point)
+highest_chlamydia_typo <- highest_chlamydia %>% pull(typo)
+
+chlamydia_screened <- sum(chlamydia$n[chlamydia$Chlamydia == "Positive" |
+                            chlamydia$Chlamydia == "Negative"], na.rm = TRUE)
+
+chlamydia_pos <- sum(filtered_data$n, na.rm = TRUE)
+chlamydia_per <- scales::label_percent(accuracy = 0.1)(chlamydia_pos/chlamydia_screened)
+
+# Calculate the maximum percentage and add a buffer
+max_percentage <- max(filtered_data$point, na.rm = TRUE)
+buffer <- 0.05 # You can adjust the buffer value as needed
+
+# Define the directory and the full file path
+directory <- "data/Results/charts/sti/"
+chlamydia_by_kp_age_file_path <- paste0(directory, county, "_chlamydia_plot.png")
+
+# Check if the directory exists
+if (!dir.exists(directory)) {
+  # Create the directory if it does not exist
+  dir.create(directory, recursive = TRUE)
+}
+
+# Check if there are records to plot
+if (nrow(filtered_data) > 0) {
+  
+
+  # Create the plot
+  plot_chlamydia <- ggplot(filtered_data, aes(x = reorder(typo,-point), 
+                                    y = point,
+                                    fill = typo, color = typo)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1), 
+                       limits = c(0, max_percentage + buffer)) +
+    geom_bar(stat = "identity", position = "dodge") +  
+    #geom_errorbar(aes(ymin = supp_wgt_lcl, ymax = point), width = 0.2, color = "black") +  
+    #facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    labs(y = element_blank(),
+         x = element_blank()) +
+    theme_minimal() +
+    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
+            position = position_dodge(width = 0.9), vjust = -0.5, color = "black", size = 3, fontface = "bold") +
+    scale_fill_manual(values = custom_colors) +
+    scale_color_manual(values = custom_colors) +  
+    theme(
+      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
+      strip.text = element_text(face = "bold", size = 10),  
+      axis.title = element_text(size = 10),  
+      axis.text = element_text(size = 10),
+      axis.text.y = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      panel.grid = element_blank()
+    )
+
+  
+  # Save the plot as an image in the specified directory
+  ggsave(filename = chlamydia_by_kp_age_file_path, plot = plot_chlamydia, width = 3, height = 2, dpi = 300)
+  
+} else {
+  message("No records to plot")
+}
+  
+  
+```
+
+
+
+```{r}
+#| message: false
+#| echo: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 10
+
+
+gonorrhea <- rio::import("data/Results/STI Analysis Results_01102024.xlsx",
+                         sheet = "Gonorrhea") |>
+  mutate(typo = case_when(is.na(Typology) ~ "All",
+                          TRUE ~ Typology),
+         county = case_when(is.na(County) ~ "All",
+                            TRUE ~ County) 
+         ) |>
+  mutate(
+  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
+  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
+  ) |>
+filter(typo != "All") %>%
+  select(-Typology, -County) %>%
+  mutate(
+    label = paste0(round(point, 1), 
+                        " (", round(lower,1), "-", round(upper,1), ")"),
+    point = point/100,
+    lower = lower/100,
+    upper = upper/100
+  )
+
+
+# Filter and prepare the data
+filtered_data <- gonorrhea %>%
+  rename(COUNTY = county) %>%
+  filter(COUNTY == county) %>%
+  filter(!is.na(point)) %>%
+  filter(Gonorrhea == "Positive")
+
+gonorrhea_typos <- filtered_data %>% pull(typo)
+
+# Narrative
+# Narrative
+highest_gonorrhea <- filtered_data %>% arrange(desc(point)) %>% slice_head(n=1) 
+highest_gonorrhea_val <- highest_gonorrhea %>% pull(point)
+highest_gonorrhea_typo <- highest_gonorrhea %>% pull(typo)
+
+gonorrhea_screened <- sum(gonorrhea$n[gonorrhea$gonorrhea == "Positive" |
+                            gonorrhea$gonorrhea == "Negative"], na.rm = TRUE)
+
+gonorrhea_pos <- sum(filtered_data$n, na.rm = TRUE)
+gonorrhea_per <- scales::label_percent(accuracy = 0.1)(gonorrhea_pos/gonorrhea_screened)
+
+# Calculate the maximum percentage and add a buffer
+max_percentage <- max(filtered_data$point, na.rm = TRUE)
+buffer <- 0.05 # You can adjust the buffer value as needed
+
+# Define the directory and the full file path
+directory <- "data/Results/charts/sti/"
+gonorrhea_by_kp_age_file_path <- paste0(directory, county, "_gonorrhea_plot.png")
+
+# Check if the directory exists
+if (!dir.exists(directory)) {
+  # Create the directory if it does not exist
+  dir.create(directory, recursive = TRUE)
+}
+
+# Check if there are records to plot
+if (nrow(filtered_data) > 0) {
+  
+
+  # Create the plot
+  plot_gonorrhea <- ggplot(filtered_data, aes(x = reorder(typo, -point), 
+                                    y = point,
+                                    fill = typo, color = typo)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1), 
+                       limits = c(0, max_percentage + buffer)) +
+    geom_bar(stat = "identity", position = "dodge") +  
+    #geom_errorbar(aes(ymin = supp_wgt_lcl, ymax = point), width = 0.2, color = "black") +  
+    #facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    labs(y = element_blank(),
+         x = element_blank()) +
+    theme_minimal() +
+    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
+            position = position_dodge(width = 0.9), vjust = -0.5, color = "black", size = 3, fontface = "bold") +
+    scale_fill_manual(values = custom_colors) +
+    scale_color_manual(values = custom_colors) +  
+    theme(
+      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
+      strip.text = element_text(face = "bold", size = 10),  
+      axis.title = element_text(size = 10),  
+      axis.text = element_text(size = 10),
+      axis.text.y = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      panel.grid = element_blank()
+    )
+
+  
+  # Save the plot as an image in the specified directory
+  ggsave(filename = gonorrhea_by_kp_age_file_path, plot = plot_gonorrhea, width = 3, height = 2, dpi = 300)
+  
+} else {
+  message("No records to plot")
+}
+  
+  
+```
+
