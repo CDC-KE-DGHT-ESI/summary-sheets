@@ -8,3 +8,7 @@ cheat.R
 data/
 cheats/
 sheets/
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto
