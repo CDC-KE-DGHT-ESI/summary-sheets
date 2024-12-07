@@ -623,20 +623,17 @@ ggsave(filename = demographics_distribution_path,
 
 ```
 
-
 ::: {layout-ncol="1"}
 ![Age distribution of respondents by key population group](`r demographics_distribution_path `)
 :::
 
--   FSW: The median age of FSWs is around `r fsw_median_age` `r fsw_iqr_age` years. 
+-   FSW: The median age of FSWs is around `r fsw_median_age` `r fsw_iqr_age` years.
 
--   MSM : The median age for MSM is `r msm_median_age` `r msm_iqr_age` years. 
+-   MSM : The median age for MSM is `r msm_median_age` `r msm_iqr_age` years.
 
--   PWID: The PWID group has a median age of `r pwid_median_age` `r pwid_iqr_age` years. 
+-   PWID: The PWID group has a median age of `r pwid_median_age` `r pwid_iqr_age` years.
 
--   TG: The median age for TG is `r tg_median_age` `r tg_iqr_age` years. 
-
-
+-   TG: The median age for TG is `r tg_median_age` `r tg_iqr_age` years.
 
 ```{r}
 #| message: false
@@ -761,8 +758,6 @@ if (nrow(filtered_data) > 0) {
 
 
 ```
-
-
 
 ```{r}
 #| message: false
@@ -900,8 +895,6 @@ combined_plot_age_file_path <- paste0(directory2, county, "_200_plot.png")
 
 ```
 
-
-
 ### HIV Prevalence by Key Population Group and Age
 
 ::: {layout-ncol="1"}
@@ -909,11 +902,10 @@ combined_plot_age_file_path <- paste0(directory2, county, "_200_plot.png")
 :::
 
 ### Viral Load suppression by Key Population Group and Age
+
 ::: {layout-ncol="1"}
 ![Viral load suppression](`r suppression_200_by_kp_age_file_path `)
 :::
-
-
 
 Viral suppression increased with age across all the key population groups except in TG, where it was lowest among individuals aged 45 years and above
 
@@ -1219,8 +1211,6 @@ cascade_plot <- long_data |>
 # :::
 
 ```
-
-
 
 -   An estimated 86.8%(CI: ) of FSW in `r county` are aware of their HIV status, 86.8% of whom are on ART and 76.9% are virally suppressed.
 -   An estimated 91%(CI:) of MSM in `r county` are aware of their HIV status, 78.7% of whom are on ART and 78.8% are virally suppressed.
@@ -2082,8 +2072,6 @@ The use of condoms is essential for key populations to engage in safer sexual pr
 ![Condom usage in the last sexual encounter](`r condom_use_file_path `)
 :::
 
-
-
 ## PrEP Services
 
 ```{r}
@@ -2340,10 +2328,8 @@ if (nrow(filtered_data) > 0) {
 ```
 
 ::: {layout-ncol="1"}
-
 ![Medication-Assisted Treatment](`r oat_by_kp_age_file_path `)
 :::
-
 
 ### HIV Testing
 
@@ -2643,7 +2629,3 @@ Access to free condoms ranged between 50%-80%.
 Although PrEP awareness was high among the key population, between 22%-65% had ever been on PrEP and current PrEP coverage ranged between 14% to 51%.
 
 Stigma is a barrier to access HIV prevention and treatment services. Between one third to two thirds of key populations have experienced some form of stigma with the highest reported among PWID.
-
-
-
-
