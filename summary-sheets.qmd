@@ -1,6 +1,6 @@
 ---
 params:
-  county: "Nairobi"
+  county: "Mombasa"
   survey_name: "Biobehavioral Survey"
   population: "Key Populations"
 title: "BIOBEHAVIORAL SURVEY AMONG KEY POPULATIONS IN `r stringr::str_to_upper(params$county)`, KENYA, 2024"
@@ -230,16 +230,16 @@ response_rates_table <- overview_data %>%
     locations = cells_body()
   ) %>%
   cols_label(
-    TYPOLOGY = html("Key Population <br> Group"),
+    TYPOLOGY = html("Key Population"),
     `Sample size` = html("Target <br> Sample <br> Size"),
     SCREENED = html("Screened"),
     ELIGIBLE = html("Eligible"),
     CONSENTED = html("Consented <br> for <br> Interview"),
-    BLOOD_COLLECTED = html("Consented <br> for <br> Blood"),
+    BLOOD_COLLECTED = html("Consented <br> for <br> Blood Draw"),
     INTERVIEWED = html("Interviewed")
   ) %>%
    cols_align(
-    align = "center",
+    align = "right",
     columns = -c(TYPOLOGY)
   ) %>%
   # Style the column headers
@@ -287,13 +287,13 @@ response_rates_table <- overview_data %>%
   # Enable row striping for better readability
   opt_row_striping() %>%
   tab_footnote(
-    footnote = "Potential participants with a coupon who presented at the survey site.",
+    footnote = "Individuals screened for the survey were those who presented to the survey site with a coupon.",
     locations = cells_column_labels(columns = SCREENED)
-  ) %>%
-  tab_footnote(
-    footnote = sample_size_footnote_text,  # Dynamic footnote here
-    locations = cells_column_labels(columns = `Sample size`)
-  )
+  ) # %>%
+  # tab_footnote(
+  #   footnote = sample_size_footnote_text,  # Dynamic footnote here
+  #   locations = cells_column_labels(columns = `Sample size`)
+  # )
 
 # Define the directory and the full file path
 directory <- "data/Results/Charts/response/"
@@ -307,8 +307,8 @@ if (!dir.exists(directory)) {
 
 # Save the table as an image in the specified directory
 gtsave(response_rates_table, filename = response_rates_table_file_path, 
-       vwidth = 1200, 
-       vheight = 800)
+       vwidth = 1250, 
+       vheight = 850)
 
 ```
 
@@ -326,7 +326,7 @@ Understanding the prevalence of HIV among key populations is crucial for tailori
 #| echo: false
 #| warning: false
 
-prev_data <- rio::import("data/Results/PrevalenceandVLsupression17_10_2024.xlsx",
+prev_data <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
                          sheet = "Prev_County_Typo") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -334,12 +334,16 @@ prev_data <- rio::import("data/Results/PrevalenceandVLsupression17_10_2024.xlsx"
                             TRUE ~ county) 
          ) |>
   mutate(
-    prevalence = paste0(round(point, 1), 
+    lower = ifelse(lower < 0 , 0, lower),
+    upper = ifelse(upper > 100 , 100, upper)
+  ) %>%
+  mutate(
+    prevalence = paste0(format(round(point, 1),nsmall = 1), 
                         " (", round(lower,1), "-", round(upper,1), ")") 
   )|>
   rename_with(~ paste0("prev_", .), .cols = -c(county, typo, prevalence))
 
-supp_data <- rio::import("data/Results/PrevalenceandVLsupression17_10_2024.xlsx",
+supp_data <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
                          sheet = "Vl(200)_County_Typo") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -347,7 +351,11 @@ supp_data <- rio::import("data/Results/PrevalenceandVLsupression17_10_2024.xlsx"
                             TRUE ~ county) 
          ) |>
   mutate(
-    suppression = paste0(round(point, 1), 
+    lower = ifelse(lower < 0 , 0 , lower),
+    upper = ifelse(upper > 100 , 100, upper)
+  ) %>%
+  mutate(
+    suppression = paste0(format(round(point, 1),nsmall = 1), 
                         " (", round(lower,1), "-", round(upper,1), ")") 
   ) |>
   rename_with(~ paste0("supp_", .), .cols = -c(county, typo, suppression))
@@ -429,14 +437,14 @@ prev_supp_pse_table <- prevalence_suppression_pse %>%
     decimals = 0
   ) %>%
    cols_align(
-    align = "center",
+    align = "right",
     columns = -typo
   ) %>%
   cols_label(
-    typo = html("Key Population <br> Group"),
-    prevalence = html("HIV Prevalence <br> (95% CI)"),
-    suppression = html("Suppression <br> (<200 copies/ml) <br> (95% CI)"),
-    pse = html("Population <br> Size Estimate <br> (95% CI)")
+    typo = html("Key Population"),
+    prevalence = html("HIV Prevalence, <br> % (95% CI)"),
+    suppression = html("Viral Suppression, % <br> <200 copies/ml <br> (95% CI)"),
+    pse = html("Population Size <br> Estimate <br> (95% CI)")
   ) %>%
   tab_style(
     style = list(
@@ -480,7 +488,23 @@ prev_supp_pse_table <- prevalence_suppression_pse %>%
     table.width = pct(80)
   ) %>%
   # Enable row striping for better readability
-  opt_row_striping() 
+  opt_row_striping() %>%
+  tab_footnote(
+    footnote = "CI : 95% Confidence Interval",
+    locations = cells_column_labels(columns = c(prevalence, suppression))
+  )%>%
+  cols_width(
+    typo ~ px(50),
+    everything() ~ px(90)
+  ) %>%
+  tab_footnote(
+    footnote = "CI: 95% Credible Interval",
+    locations = cells_column_labels(columns = pse)
+  ) %>%
+  tab_footnote(
+    footnote = "Viral suppression is among all HIV positive individuals regardless of knowledge of HIV status or use of ART",
+    locations = cells_column_labels(columns = pse)
+  )
 
 # Define the directory and the full file path
 directory <- "data/Results/Prevention/Charts/"
@@ -493,7 +517,9 @@ if (!dir.exists(directory)) {
 }
 
 # Save the table as an image in the specified directory
-gtsave(prev_supp_pse_table, filename = prev_supp_pse_table_file_path, vwidth = 1300, vheight = 800)
+gtsave(prev_supp_pse_table, filename = prev_supp_pse_table_file_path, 
+       vwidth = 1250, 
+       vheight = 850)
 
 ```
 
@@ -570,28 +596,34 @@ clean_data <- clean_data |>
   left_join(quartiles_data)
 
 num_typos <- age_dist %>% distinct(typo) %>% pull(typo) %>% length()
-plot_height <- if (num_typos > 2) 6 else 3
+plot_height <- if (num_typos > 3) 6 else 4
 plot_width <- if (num_typos > 1) 8 else 4
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 
 # Create the distribution plot and add median line
 dist_plot <- ggplot(age_dist, aes(x = factor(age), 
-               y = percent_row/100,
+               y = percent_row / 100,
                fill = typo, color = typo)) +  
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6, color = "black") +  
-  geom_errorbar(aes(ymin = lcl_row/100, ymax = ucl_row/100), width = 0.2, color = "darkgray") +  
-  geom_text(aes(label = format(round(percent_row,1), nsmall = 1) ), 
-            position = position_dodge(width = 0.7), vjust = 1.5, 
-             color = "white", size = 3.5, fontface = "bold") +  
+  geom_errorbar(aes(ymin = lcl_row / 100, ymax = ucl_row / 100), width = 0.2,  color = "#666666") +  
+  geom_text(aes(label = format(round(percent_row, 1), nsmall = 1), 
+                y = ifelse(percent_row < 10, 0.05, 0.01)
+                ), # Adjust y to place labels at the base of each bar
+            position = position_dodge(width = 0.7), vjust = 0,  # Use vjust = 0 to align text with the base
+            color = "black", size = 3.5, fontface = "bold") +  
   scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
-  facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
-  labs(y = element_blank(),
-         x = element_blank()) +
+  facet_wrap(~ typo, nrow = facet_rows, scales = "fixed") +
+  labs(y = "Proportion (%)",
+       x = "Age (years)",
+       caption = "Error bars represent the 95% confidence interval (CI)"
+       ) +
   theme_minimal() +
   scale_fill_manual(values = custom_colors) +
   scale_color_manual(values = custom_colors) +   
   theme(
-    strip.text = element_text(face = "bold", size = 10, color = "#666666"),
+    strip.background = element_rect(fill = "#E6AB02", color = "black"),
+    strip.text = element_text(face = "bold", size = 12, color = "black"),
     axis.title = element_text(size = 10),  
     axis.text = element_text(size = 10),
     axis.text.y = element_text(size = 6),
@@ -601,6 +633,8 @@ dist_plot <- ggplot(age_dist, aes(x = factor(age),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank()
   )
+
+
 
 
 # Define the directory and the full file path
@@ -643,7 +677,7 @@ ggsave(filename = demographics_distribution_path,
 #| fig-width: 8
 
 
-prev_age <- rio::import("data/Results/PrevalenceandVLsupression17_10_2024.xlsx",
+prev_age <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
                          sheet = "Prev_County_Typo_Age") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -680,7 +714,7 @@ filtered_data <- prev_age %>%
   mutate(label_text = paste0(label_percent(accuracy = 1)(prev_point))) %>%
   filter(!is.na(prev_point))%>%
   tidyr::complete(COUNTY, typo, prev_age,  
-      fill = list(COUNTY = county, prev_point = 0, prev_lower = 0, prev_upper = 0))
+      fill = list(COUNTY = county, prev_point = NA_real_, prev_lower = NA_real_, prev_upper = NA_real_))
 
   # Calculate a scaling factor based on the ranges of supp_point and weighted_N
 scale_factor <- max(filtered_data$prev_weighted_N, na.rm = TRUE) / max(filtered_data$prev_point, na.rm = TRUE)
@@ -702,8 +736,9 @@ if (!dir.exists(directory)) {
 library(ggpattern)
 
 num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
-plot_height <- if (num_typos > 2) 6 else 3
+plot_height <- if (num_typos > 3) 6 else 4
 plot_width <- if (num_typos > 1) 8 else 4
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
@@ -713,22 +748,26 @@ if (nrow(filtered_data) > 0) {
                                        y = prev_point,
                                        fill = typo, color = typo)) +  
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6, color = "black") +
-  geom_errorbar(aes(ymin = prev_lower, ymax = prev_upper), width = 0.2, color = "darkgray") +  
-  geom_text(aes(label = ifelse(is.na(prev_point) | prev_point == 0, 0.0, 
-                               format(round(prev_point * 100, 1), nsmall = 1))), 
+  geom_errorbar(aes(ymin = prev_lower, ymax = prev_upper), width = 0.2,  color = "#666666") +  
+  geom_text(aes(label = ifelse(is.na(prev_point), "*", 
+                               format(round(prev_point * 100, 1), nsmall = 1)), y = 0), 
             position = position_dodge(width = 0.7), vjust = -0.5, 
-             color = "black", size = 3.5, fontface = "bold") +  
+            color = "black", size = 3.5, fontface = "bold") +   
   scale_y_continuous(
     labels = scales::label_percent(accuracy = 1)
   ) +
-  facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
-  labs(y = element_blank(),
-         x = element_blank()) +
+  facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
+  labs(y = "Proportion (%)",
+       x = "Age (years)",
+       caption = "Error bars represent the 95% confidence interval (CI) \n
+                  * Number suppressed due to small values"
+       ) +
   theme_minimal() +
-  scale_fill_manual(values = custom_colors) +  
-  scale_color_manual(values = custom_colors) + 
+  scale_fill_manual(values = custom_colors) +
+  scale_color_manual(values = custom_colors) +   
   theme(
-    strip.text = element_text(face = "bold", size = 10, color = "#666666"),
+    strip.background = element_rect(fill = "#E6AB02", color = "black"),
+    strip.text = element_text(face = "bold", size = 12, color = "black"),
     axis.title = element_text(size = 10),  
     axis.text = element_text(size = 10),
     axis.text.y = element_text(size = 6),
@@ -736,8 +775,7 @@ if (nrow(filtered_data) > 0) {
     legend.text = element_text(size = 10),
     panel.grid.major = element_line(size = 0.2),
     panel.grid.minor.x = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    plot.title = element_text(hjust = 0.5, color = "black", size = 15, face = "bold")
+    panel.grid.minor.y = element_blank()
   )
 
 
@@ -766,7 +804,7 @@ if (nrow(filtered_data) > 0) {
 #| fig-height: 6
 #| fig-width: 8
 
-supp_age <- rio::import("data/Results/PrevalenceandVLsupression17_10_2024.xlsx",
+supp_age <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
                          sheet = "Vl(200)_County_Typo_Age") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -801,7 +839,7 @@ filtered_data <- supp_age %>%
   mutate(label_text = paste0(label_percent(accuracy = 1)(supp_point))) %>%
   filter(!is.na(supp_point)) %>%
   tidyr::complete(COUNTY, typo, supp_age,  
-      fill = list(COUNTY = county, supp_point = 0, supp_lower = 0, supp_upper = 0))
+      fill = list(COUNTY = county, supp_point = NA_real_, supp_lower = NA_real_, supp_upper = NA_real_))
 
   # Calculate a scaling factor based on the ranges of supp_point and weighted_N
 scale_factor <- (max(filtered_data$supp_weighted_N, na.rm = TRUE)) * 
@@ -822,8 +860,9 @@ if (!dir.exists(directory)) {
 }
 
 num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
-plot_height <- if (num_typos > 2) 6 else 3
+plot_height <- if (num_typos > 3) 6 else 4
 plot_width <- if (num_typos > 1) 8 else 4
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
@@ -833,21 +872,28 @@ plot_supp_200 <- ggplot(filtered_data, aes(x = factor(supp_age),
                                            y = supp_point,
                                            fill = typo, color = typo)) +  
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6, color = "black") +
-  geom_errorbar(aes(ymin = supp_lower, ymax = supp_upper), width = 0.2, color = "darkgray") +  
-  geom_text(aes(label = ifelse(is.na(supp_point) | supp_point == 0, 0.0, 
-                               format(round(supp_point * 100, 1), nsmall = 1))), 
+  geom_errorbar(aes(ymin = supp_lower, ymax = supp_upper), width = 0.2,  color = "#666666") +  
+  geom_text(aes(label = ifelse(is.na(supp_point), "*",
+                               format(round(supp_point*100, 1), nsmall = 1)), 
+                y = 0), , 
             position = position_dodge(width = 0.7), vjust = -0.5, 
              color = "black", size = 3.5, fontface = "bold") +  
   scale_y_continuous(
     labels = scales::label_percent(accuracy = 1)
   ) + 
-  facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
-  labs(y = element_blank(), x = element_blank()) +
+  facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
+  labs(y = "Proportion (%)",
+       x = "Age (years)",
+       caption = "Error bars represent the 95% confidence interval (CI) \n
+                   * Number suppressed due to small values \n
+       Viral suppression is among all HIV positive individuals regardless of knowledge of HIV status or use of ART"
+       ) +
   theme_minimal() +
-  scale_fill_manual(values = custom_colors) +  
-  scale_color_manual(values = custom_colors) + 
+  scale_fill_manual(values = custom_colors) +
+  scale_color_manual(values = custom_colors) +   
   theme(
-    strip.text = element_text(face = "bold", size = 10, color = "#666666"),
+    strip.background = element_rect(fill = "#E6AB02", color = "black"),
+    strip.text = element_text(face = "bold", size = 12, color = "black"),
     axis.title = element_text(size = 10),  
     axis.text = element_text(size = 10),
     axis.text.y = element_text(size = 6),
@@ -855,8 +901,7 @@ plot_supp_200 <- ggplot(filtered_data, aes(x = factor(supp_age),
     legend.text = element_text(size = 10),
     panel.grid.major = element_line(size = 0.2),
     panel.grid.minor.x = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    plot.title = element_text(hjust = 0.5, color = "black", size = 15, face = "bold")
+    panel.grid.minor.y = element_blank()
   )
 
 
@@ -916,91 +961,75 @@ Viral suppression increased with age across all the key population groups except
 #| echo: false
 #| warning: false
 #| fig-height: 6
-#| fig-width: 8
+#| fig-width: 10
 
-
-unconditional <- rio::import("data/Results/95_95_95/Final/results_v1.xlsx",
-                         sheet = "Nonconditional_Clean") |>
-  rename(typo = Typology,
-         county = County) %>%
+cascade_uncond <- rio::import("data/Results/95_95_95/final/results_v1.xlsx",
+                                   sheet = "Nonconditional_Clean") |>
+rename(typo = Typology,
+county = County) %>%
+# separate(prev_typo, c("county","typo")) |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
                             TRUE ~ county) 
-         ) %>%
-  mutate(report = "Unconditional") %>%
-  pivot_longer(
-    cols = -c(typo, county, report)
-  ) %>%
+         ) |>
+mutate(report = "Unconditional") %>%
+  pivot_longer(cols = -c(county, typo, report)) %>%
   separate(name, c("indicator", "metric"), sep = "_") %>%
   mutate(
     metric = case_when(str_detect(metric, "%") ~ "point",
                        TRUE ~ metric)
   ) %>%
-  mutate(
-    metric = str_replace(metric, " ci", "")
-  ) %>%
-  pivot_wider(names_from = metric, values_from = value) %>%
-  filter(indicator != "VLS<1000") %>%
-  mutate(
-    indicator = case_when(indicator == "VLS<200" ~ "Suppressed",
-                          TRUE ~ indicator)
-  )
+  pivot_wider(names_from = metric,
+              values_from = value)
 
 
-conditional <- rio::import("data/Results/95_95_95/Final/results_v1.xlsx",
-                         sheet = "Conditional_Clean") |>
-  rename(typo = Typology,
-         county = County) %>%
+cascade_cond <- rio::import("data/Results/95_95_95/final/results_v1.xlsx",
+                                   sheet = "Conditional_Clean") |>
+rename(typo = Typology,
+county = County) %>%
+# separate(prev_typo, c("county","typo")) |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
                             TRUE ~ county) 
-         ) %>%
-  mutate(report = "Conditional") %>%
-  pivot_longer(
-    cols = -c(typo, county, report)
-  ) %>%
+         ) |>
+mutate(report = "Conditional") %>%
+  pivot_longer(cols = -c(county, typo, report)) %>%
   separate(name, c("indicator", "metric"), sep = "_") %>%
   mutate(
     metric = case_when(str_detect(metric, "%") ~ "point",
                        TRUE ~ metric)
   ) %>%
+  pivot_wider(names_from = metric,
+              values_from = value)
+
+
+cascade <- bind_rows(cascade_uncond, cascade_cond) %>%
+  rename(lower = `lower ci`,
+         upper = `upper ci`,
+         weighted_N = weightedN,
+         weighted_D = weightedD) %>%
   mutate(
-    metric = str_replace(metric, " ci", "")
+  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
+  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
   ) %>%
-  pivot_wider(names_from = metric, values_from = value) %>%
-  filter(indicator != "VLS<1000") %>%
   mutate(
     indicator = case_when(indicator == "VLS<200" ~ "Suppressed",
-                          TRUE ~ indicator)
-  )
+                          TRUE ~ indicator
+                          )
+  ) %>%
+  filter(indicator != "VLS<1000")
 
 
 ```
-
 
 ```{r}
 #| message: false
 #| echo: false
 #| warning: false
 #| fig-height: 6
-#| fig-width: 8
-
-cascade <- bind_rows(unconditional, conditional) |>
-  mutate(
-  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
-  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
-  ) |>
-mutate(point = point/100,
-lower = lower/100,
-upper = upper/100,
-metric = case_when(str_detect(indicator, "ware") ~ "Aware",
-str_detect(indicator, "ART") ~ "On ART",
-str_detect(indicator, "pressed") ~ "Suppressed",
-TRUE ~ NA_character_
-)
-)
+#| fig-width: 10
 
 library(RColorBrewer)
 
@@ -1016,333 +1045,6 @@ filtered_data <- cascade %>%
 
 
 filtered_conditional <- cascade %>%
-  rename(COUNTY = county) %>%
-  filter(COUNTY == county) |>
-  filter(report == "Conditional") %>%
-  select(COUNTY, typo, indicator, point, lower, upper) |>
- rename_with(~ paste0("cond_", .), .cols = -c(COUNTY, typo, indicator)) 
-
-targets_95 <- filtered_data |>
-                filter(indicator == "Aware") |>
-                group_by(typo) %>%
-                summarise(
-                plhiv = sum(weightedD)) %>%
-                ungroup() |>
-                mutate(
-                Aware = 0.95 * plhiv,
-                `On ART` = 0.95 * Aware,
-                Suppressed = 0.95 * `On ART`) |>
-                select(-plhiv) |>
-                pivot_longer(
-                cols = Aware : Suppressed,
-                names_to = "indicator",
-                values_to = "target_value"
-                ) 
-
-filtered_data <- filtered_data |>
-left_join(targets_95) |>
-left_join(filtered_conditional) %>%
-mutate(Gap = if_else(target_value - weightedN < 0, 0, target_value - weightedN))
-
-filtered_data_labels <- cascade %>%
-  rename(COUNTY = county) %>%
-  filter(COUNTY == county) |>
-  filter(report == "Conditional")
-
-
-# Calculate the maximum percentage and add a buffer
-max_percentage <- max(filtered_data$weightedN, na.rm = TRUE)
-buffer <- min(filtered_data$weightedN, na.rm = TRUE)  # You can adjust the buffer value as needed
-
-# Define the directory and the full file path
-directory <- "data/Results/charts/cascade/"
-cascade_by_kp_age_file_path <- paste0(directory, county, "_cascade_plot.png")
-
-# Check if the directory exists
-if (!dir.exists(directory)) {
-  # Create the directory if it does not exist
-  dir.create(directory, recursive = TRUE)
-}
-
-# Check if there are records to plot
-if (nrow(filtered_data) > 0) {
-  
-  # Create the plot
-# Define the normalization function
-normalize <- function(x, na.rm = TRUE) {
-    return((x - min(x, na.rm = na.rm)) / (max(x, na.rm = na.rm) - min(x, na.rm = na.rm)))
-}
-
-# Apply normalization to the `weighted_N` column for the secondary axis
-library(ggpattern)
-
-
-# Plot with stacked bars
-# Refined Plot with stacked bars
-# Pivot longer to create a stacked dataset
-long_data <- filtered_data %>%
-  pivot_longer(cols = c(weightedN, Gap), 
-               names_to = "type", 
-               values_to = "value") |>
-mutate(
-category = case_when(indicator == "Aware" & type == "Gap" ~ "Gap",
-indicator == "On ART" & type == "Gap" ~ "Gap",
-indicator == "Suppressed" & type == "Gap" ~ "Gap",
-TRUE ~ indicator))
-
-
-# Load required library for brewer palette
-library(RColorBrewer)
-
-# Get colors from "Dark2" palette
-dark2_colors <- brewer.pal(n = 4, name = "Dark2")
-
-# Define the custom color palette for the categories
-custom_colors_cascade <- c("Gap" = "lightgray", 
-                   "Aware" = "#1b9e77",  # Replace dark2_colors[1]
-                   "On ART" = "#d95f02",  # Replace dark2_colors[2]
-                   "Suppressed" = "#7570b3")  # Replace dark2_colors[3]
-
-cascade_plot <- long_data |>
-  ggplot(aes(x = indicator, y = value, fill = factor(category, 
-    levels = c("Gap", "Aware", "On ART", "Suppressed")))) +
-  geom_bar(stat = "identity", position = "stack", width = 0.6, color = "black") +
-  scale_y_continuous(
-    labels = scales::label_comma(),
-    breaks = function(x) c(0, max(x)/2, max(x)),  # Show 0, middle, and max
-    sec.axis = sec_axis(
-      ~ normalize(.),
-      name = NULL,  # Remove the title for the secondary axis
-      breaks = c(0, 1),  # Shows only 0%, and 100%
-      labels = NULL  # Remove labels for the secondary axis
-    )
-  ) +
-  # geom_text(aes(label = ifelse(type == "weighted_N", 
-  #                    round(cond_point, 1), "")),
-  #           vjust = 0.01, 
-  #           color = "black", 
-  #           size = 4, 
-  #           facefont = "bold",
-  #           position = position_stack(vjust = 0.5)) +
-  geom_text(aes(label = ifelse(type == "weighted_N", 
-                     round(cond_point, 1), ""), 
-                y = ifelse(cond_point < 10, 0.05, 0.01)
-                ), # Adjust y to place labels at the base of each bar
-            position = position_dodge(width = 0.5), 
-            vjust = 0,  # Use vjust = 0 to align text with the base
-            color = "black", size = 3.5, fontface = "bold") + 
-  theme_minimal() +
-  labs(x = "Metric", y = "Estimated population", fill = "Category") +
-  facet_wrap(~ typo, nrow = facet_rows, scales = "free") +
-  # Apply the custom color palette and include the gap explanation
-  scale_fill_manual(
-    values = c(
-      "Gap" = "lightgray",
-      "Aware" = custom_colors_cascade[["Aware"]],
-      "On ART" = custom_colors_cascade[["On ART"]],
-      "Suppressed" = custom_colors_cascade[["Suppressed"]]
-    ),
-    labels = c(
-      "Gap" = "Gap to target",
-      "Aware" = "Aware of HIV Status",
-      "On ART" = "On Treatment",
-      "Suppressed" = "Viral Load Suppressed"
-    )
-  ) +
-  theme(
-    strip.background = element_rect(fill = "#E6AB02", color = "black"),
-    strip.text = element_text(face = "bold", size = 12, color = "black"),
-    axis.text = element_text(size = 10),  # Adjust text size for readability
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10),
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank(),
-    legend.position = "bottom",  # Position legend at the bottom
-    legend.text = element_text(size = 10),
-    legend.title = element_blank(),
-    panel.grid.major = element_line(size = 0.2),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.minor.y = element_blank()
-  ) +
-  scale_x_discrete(labels = scales::label_wrap(10))
-
-
-
-
-
-  # Save the plot as an image 
-  ggsave(filename = cascade_by_kp_age_file_path, 
-  plot = cascade_plot, , 
-                 width = 8, 
-                 height = 4.5, 
-                 dpi = 300 
-                 )
-  
-  
-} else {
-  message("No records to plot")
-}
-
-# ::: {layout-ncol="1"}
-# ![95-95-95 Cascade](`r cascade_by_kp_age_file_path `)
-# :::
-
-
-```
-
-
-```{r}
-#| message: false
-#| echo: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 8
-
-
-# Aware data
-aware_unconditional <- read_csv("data/Results/95_95_95/aware_nonconditional-2024-10-01.csv") |>
-rename(typo = Typology,
-county = County) %>%
-# separate(prev_typo, c("county","typo")) |>
-  mutate(typo = case_when(is.na(typo) ~ "All",
-                          TRUE ~ typo),
-         county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
-         ) |>
-rename(indicator = aware_) |>
-mutate(report = "Unconditional")
-
-
-aware_conditional <- read_csv("data/Results/95_95_95/aware_conditional-2024-10-01.csv") |>
-rename(typo = Typology,
-county = County) %>%
-# separate(prev_typo, c("county","typo")) |>
-  mutate(typo = case_when(is.na(typo) ~ "All",
-                          TRUE ~ typo),
-         county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
-         ) |>
-rename(indicator = aware_) |>
-mutate(report = "Conditional")
-
-
-aware <- bind_rows(aware_conditional, aware_unconditional)
-
-```
-
-```{r}
-#| message: false
-#| echo: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 8
-
-# On ARVs
-onarvs_unconditional <- read_csv("data/Results/95_95_95/revised/onarvs_nonconditional-2024-10-23.csv") |>
-rename(typo = typology,
-county = county) %>%
-# separate(prev_typo, c("county","typo")) |>
-  mutate(typo = case_when(is.na(typo) ~ "All",
-                          TRUE ~ typo),
-         county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
-         ) |>
-rename(indicator = onarvs_) |>
-mutate(report = "Unconditional")
-
-
-onarvs_conditional <- read_csv("data/Results/95_95_95/revised/onarvs_conditional-2024-10-23.csv") |>
-rename(typo = typology,
-county = county) %>%
-# separate(prev_typo, c("county","typo")) |>
-  mutate(typo = case_when(is.na(typo) ~ "All",
-                          TRUE ~ typo),
-         county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
-         ) |>
-rename(indicator = onarvs_) |>
-mutate(report = "Conditional")
-
-
-onarvs <- bind_rows(onarvs_conditional, onarvs_unconditional)
-
-
-```
-
-```{r}
-#| message: false
-#| echo: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 8
-
-# Suppressed 200 copies/ml - National guidelines
-vls200_unconditional <- read_csv("data/Results/95_95_95/revised/vls200_nonconditional-2024-10-23.csv") |>
-rename(typo = typology,
-county = county) %>%
-# separate(prev_typo, c("county","typo")) |>
-  mutate(typo = case_when(is.na(typo) ~ "All",
-                          TRUE ~ typo),
-         county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
-         ) |>
-rename(indicator = vls_200) |>
-mutate(report = "Unconditional")
-
-
-vls200_conditional <- read_csv("data/Results/95_95_95/revised/vls200_conditional-2024-10-23.csv") |>
-rename(typo = typology,
-county = county) %>%
-# separate(prev_typo, c("county","typo")) |>
-  mutate(typo = case_when(is.na(typo) ~ "All",
-                          TRUE ~ typo),
-         county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
-         ) |>
-rename(indicator = vls_200) |>
-mutate(report = "Conditional")
-
-
-vls200 <- bind_rows(vls200_conditional, vls200_unconditional)
-```
-
-```{r}
-#| message: false
-#| echo: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 10
-
-
-cascade_data <- bind_rows(aware, onarvs, vls200) |>
-  mutate(
-  lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
-  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
-  ) |>
-mutate(point = point/100,
-lower = lower/100,
-upper = upper/100,
-metric = case_when(str_detect(indicator, "ware") ~ "Aware",
-str_detect(indicator, "ART") ~ "On ART",
-str_detect(indicator, "pressed") ~ "Suppressed",
-TRUE ~ NA_character_
-)
-)
-
-library(RColorBrewer)
-
-# Define the order of the age groups
-metric_order <- unique(cascade_data$metric)
-
-
-# Filter and prepare the data
-filtered_data <- cascade_data %>%
-  rename(COUNTY = county) %>%
-  filter(COUNTY == county) |>
-  filter(report == "Unconditional") 
-
-
-filtered_conditional <- cascade_data %>%
   rename(COUNTY = county) %>%
   filter(COUNTY == county) |>
   filter(report == "Conditional") %>%
@@ -1371,10 +1073,17 @@ left_join(targets_95) |>
 left_join(filtered_conditional) %>%
 mutate(Gap = if_else(target_value - weighted_N < 0, 0, target_value - weighted_N))
 
-filtered_data_labels <- cascade_data %>%
+filtered_data_labels <- cascade %>%
   rename(COUNTY = county) %>%
   filter(COUNTY == county) |>
   filter(report == "Conditional")
+
+
+
+num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
+plot_height <- if (num_typos > 3) 6 else 4
+plot_width <- if (num_typos > 1) 8 else 4
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 
 # Calculate the maximum percentage and add a buffer
@@ -1430,55 +1139,84 @@ custom_colors_cascade <- c("Gap" = "lightgray",
                    "On ART" = "#d95f02",  # Replace dark2_colors[2]
                    "Suppressed" = "#7570b3")  # Replace dark2_colors[3]
 
+sec.axis = sec_axis(
+  ~ normalize(.),
+  name = NULL,  # Remove the title for the secondary axis
+  breaks = c(0, 1),  # Define breaks if needed
+  labels = NULL  # Remove labels for the secondary axis
+)
+
 cascade_plot <- long_data |>
-  ggplot(aes(x = metric, y = value, fill = factor(category, 
+  ggplot(aes(x = indicator, y = value, fill = factor(category, 
     levels = c("Gap", "Aware", "On ART", "Suppressed")))) +
-  geom_bar(stat = "identity", position = "stack") +
+  geom_bar(stat = "identity", position = "stack", width = 0.6, color = "black") +
   scale_y_continuous(
     labels = scales::label_comma(),
     breaks = function(x) c(0, max(x)/2, max(x)),  # Show 0, middle, and max
-    sec.axis = sec_axis(~ normalize(.),
-                        name = element_blank(),
-                        breaks = c(0, 1),  # Shows only 0%, and 100%
-                        labels = scales::label_percent())
+    sec.axis = sec_axis(
+      ~ normalize(.),
+      name = NULL,  # Remove the title for the secondary axis
+      breaks = c(0, 1),  # Shows only 0%, and 100%
+      labels = NULL  # Remove labels for the secondary axis
+    )
   ) +
-  # geom_errorbar(aes(ymin = ifelse(type == "weighted_N", lower*value, 0),
-  #                   ymax = ifelse(type == "weighted_N", upper*value, 0)),
-  #                   width = 0.2,
-  #   color = "darkgray") +
+  # geom_text(aes(label = ifelse(type == "weighted_N", 
+  #                    round(cond_point, 1), "")),
+  #           vjust = 0.01, 
+  #           color = "black", 
+  #           size = 4, 
+  #           facefont = "bold",
+  #           position = position_stack(vjust = 0.5)) +
   geom_text(aes(label = ifelse(type == "weighted_N", 
-                     scales::label_percent(accuracy = 0.1)(cond_point), "")),
-            vjust = 0.5, color = "black", size = 4, facefont = "bold",
-            position = position_stack(vjust = 0.5)) +
+                     format(round(cond_point, 1), nsmall = 1), "*"), 
+                y = ifelse(cond_point < 10, 0.05, 0.01)
+                ), # Adjust y to place labels at the base of each bar
+            position = position_stack(vjust = 0.5), 
+            vjust = -1,  # Use vjust = 0 to align text with the base
+            color = "black", size = 3.5, fontface = "bold") + 
   theme_minimal() +
-  labs(x = "Metric", y = "Estimated population", fill = "Category") +
-  facet_wrap(~ typo, scales = "free_y") +
-  # Apply the custom color palette
-  scale_fill_manual(values = custom_colors_cascade) +
+  labs(x = "Metric", y = "Estimated population", fill = "Category",
+       caption = "Note: Proportions presented are conditional.") +
+  facet_wrap(~ typo, nrow = facet_rows, scales = "free") +
+  # Apply the custom color palette and include the gap explanation
+  scale_fill_manual(
+    values = c(
+      "Gap" = "lightgray",
+      "Aware" = custom_colors_cascade[["Aware"]],
+      "On ART" = custom_colors_cascade[["On ART"]],
+      "Suppressed" = custom_colors_cascade[["Suppressed"]]
+    ),
+    labels = c(
+      "Gap" = "Gap to target",
+      "Aware" = "Aware",
+      "On ART" = "On ART",
+      "Suppressed" = "Suppressed"
+    )
+  ) +
   theme(
-    strip.text = element_text(face = "bold", size = 10),
-    axis.title = element_text(size = 10),
+    strip.background = element_rect(fill = "#E6AB02", color = "black"),
+    strip.text = element_text(face = "bold", size = 12, color = "black"),
     axis.text = element_text(size = 10),  # Adjust text size for readability
-    axis.text.x = element_text(size = 12),
-    axis.text.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
     axis.title.x = element_blank(),
     axis.title.y = element_blank(),
-    legend.position = "none",
+    legend.position = "bottom",  # Position legend at the bottom
     legend.text = element_text(size = 10),
-    legend.title = element_blank()
+    legend.title = element_blank(),
+    panel.grid.major = element_line(size = 0.2),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
   ) +
   scale_x_discrete(labels = scales::label_wrap(10))
 
 
-
-
-
-  # Save the plot as an image 
+# Save the plot as an image 
   ggsave(filename = cascade_by_kp_age_file_path, 
   plot = cascade_plot, , 
-                 width = 8, 
-                 height = 4.5, 
-                 dpi = 300 
+                 width = plot_width, 
+                 height = plot_height, 
+                 dpi = 300
                  )
   
   
@@ -1486,11 +1224,12 @@ cascade_plot <- long_data |>
   message("No records to plot")
 }
 
-# ::: {layout-ncol="1"}
-# ![95-95-95 Cascade](`r cascade_by_kp_age_file_path `)
-# :::
 
 ```
+
+::: {layout-ncol="1"}
+![95-95-95 Cascade](`r cascade_by_kp_age_file_path `)
+:::
 
 -   An estimated 86.8%(CI: ) of FSW in `r county` are aware of their HIV status, 86.8% of whom are on ART and 76.9% are virally suppressed.
 -   An estimated 91%(CI:) of MSM in `r county` are aware of their HIV status, 78.7% of whom are on ART and 78.8% are virally suppressed.
@@ -1551,9 +1290,10 @@ filter(typo != "All") %>%
     upper = upper/100
   ) %>%
 rename(Indicator = `Eligible_hepB`) %>%
-mutate(Indicator == "Positive") %>%
+mutate(Indicator = case_when(is.na(Indicator) ~ "Positive",
+                             TRUE ~ NA_character_)) %>%
 mutate(sti = "Hepatitis B") %>%
-filter(is.na(Indicator))
+filter(!is.na(Indicator))
 
 ##
 hebC <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
@@ -1577,9 +1317,10 @@ filter(typo != "All") %>%
     upper = upper/100
   ) %>%
 rename(Indicator = `Eligible_hepC`) %>%
-mutate(Indicator == "Positive") %>%
+mutate(Indicator = case_when(is.na(Indicator) ~ "Positive",
+                             TRUE ~ NA_character_)) %>%
 mutate(sti = "Hepatitis C")%>%
-filter(is.na(Indicator))
+filter(!is.na(Indicator))
 
 
 ##
@@ -1648,8 +1389,9 @@ sti_data_pos <- bind_rows(syphlis, hebB, hebC, chlamydia, gonorrhea) %>%
 rename(COUNTY = county) %>%
   filter(COUNTY == county) %>%
   filter(!is.na(point)) %>%
-  filter(Indicator %in% c("Active Infection", "Positive", NA_character_)) # |>
-  #filter(n >= 5)
+  #filter(n > 5) %>%
+  filter(Indicator %in% c("Active Infection", "Positive", NA_character_)) |>
+  filter(!(sti %in% c("Hepatitis C") & typo %in% c("MSM", "FSW", "TG")))
 
 
 # Calculate the maximum percentage and add a buffer
@@ -1682,13 +1424,17 @@ if (nrow(sti_data_pos) > 0) {
   geom_bar(stat = "identity", position = position_dodge(width = 0.75), 
            width = 0.7) +   
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
-                color = "darkgray",
+                color = "#666666",
                 position = position_dodge(width = 0.75)) +  
-  geom_text(aes(label = format(round(point * 100, 1), nsmall = 1)), 
+  geom_text(aes(label = ifelse((point*100) < 0.045, "*",
+                  format(round(point * 100, 1), nsmall = 1)), 
+                y = 0.01), 
             position = position_dodge(width = 0.75), 
-            vjust = -0.5, color = "black", size = 4, fontface = "bold") +
-  labs(y = element_blank(),
-       x = element_blank()) +
+            vjust = 0, color = "black", size = 3.5, fontface = "bold") +  # Adjust y position and vjust for label at bar base
+  labs(y = "STI Prevalence (%)",
+       x = element_blank(),
+       caption = "Error bars represent the 95% confidence interval (CI). \n
+       * Number suppressed due to small values") +
   theme_minimal() +
   theme(
     axis.title = element_text(size = 10),  
@@ -1703,12 +1449,13 @@ if (nrow(sti_data_pos) > 0) {
 
 
 
+
   
   # Save the plot as an image in the specified directory
   ggsave(filename = sti_by_kp_age_file_path, 
           plot = plot_sti, 
           width = 8, 
-          height = 3.5, 
+          height = 4, 
           dpi = 300 
 )
   
@@ -1826,8 +1573,8 @@ stigma_long <- stigma %>%
     ),
  metric = case_when(
   str_detect(indicator, "family_exclusion") ~ "Excluded from family activities",
-  str_detect(indicator, "scolded") ~ "Ever Scolded",
-  str_detect(indicator, "blackmailed") ~ "Ever Blackmailed",
+  str_detect(indicator, "scolded") ~ "Scolded",
+  str_detect(indicator, "blackmailed") ~ "Blackmailed",
   str_detect(indicator, "gossip") ~ "Gossiped about",
   str_detect(indicator, "any__") ~ "Any experience",
   str_detect(indicator, "any_3") ~ "Stigma Index (Any 3)",
@@ -1874,8 +1621,9 @@ if (!dir.exists(directory)) {
 }
 
 num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
-plot_height <- if (num_typos > 2) 6 else 3
-plot_width <- if (num_typos > 1) 8 else 4
+plot_height <- if (num_typos > 3) 6 else 4
+plot_width <- if (num_typos > 1) 8 else 5
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
@@ -1888,19 +1636,21 @@ if (nrow(filtered_data) > 0) {
     scale_x_continuous(labels = scales::label_percent(accuracy = 1)) +
     geom_bar(stat = "identity", position = "dodge", width = 0.9, color = "black") + 
     geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0.1, 
-                   color = "darkgray",
+                   color = "#666666",
                    position = position_dodge(width = 0.75)) +
-    facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
-         x = NULL) +
+         x = "% of Participants",
+         caption = "Error bars represent the 95% confidence interval (CI)") +
     theme_minimal() +
-    geom_text(aes(label = format(round(point*100,1), nsmall = 1)), 
-              position = position_dodge(width = 0.9), hjust = 1.0, 
+    geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
+              hjust = 0, 
               color = "black", size = 4, fontface = "bold") +
     scale_fill_manual(values = custom_colors) +
     scale_color_manual(values = custom_colors) +
     theme(
-      strip.text = element_text(face = "bold", size = 10, color = "#666666"),  
+      strip.background = element_rect(fill = "#E6AB02", color = "black"),
+      strip.text = element_text(face = "bold", size = 12, color = "black"),  
       axis.title = element_text(size = 10),  
       axis.text = element_text(size = 10),
       axis.text.y = element_text(size = 14),
@@ -1910,7 +1660,7 @@ if (nrow(filtered_data) > 0) {
       panel.grid.major = element_line(size = 0.2),
       panel.grid.minor.x = element_blank()
     ) +
-    scale_y_discrete(labels = function(labels) scales::label_wrap(40)(labels))
+    scale_y_discrete(labels = function(labels) scales::label_wrap(25)(labels))
 
 
 
@@ -1918,7 +1668,7 @@ if (nrow(filtered_data) > 0) {
   # Save the plot as an image in the specified directory
   ggsave(filename = stigma_by_kp_age_file_path, 
          plot = plot_stigma, 
-         width = 8, 
+         width = plot_width, 
          height = plot_height, 
          dpi = 300 
 )
@@ -1937,6 +1687,148 @@ if (nrow(filtered_data) > 0) {
 ### Avoiding Healthcare
 
 FSW and MSM had the highest proportion of individuals who reported avoiding seeking healthcare services due to perceived discrimination (self-stigma). In contrast, PWID reported a lower proportion of avoidance (1.9%), indicating concerns about being identified as a key population (KP). Notably, TG) had the highest rate of avoidance, with 11% of TGs not seeking healthcare services due to fears of discrimination; this translates to approximately one in ten TG individuals. Additionally, 86.5% of PWID and 66% of FSW reported experiencing discrimination in healthcare settings.
+
+```{r}
+#| message: false
+#| results: hide
+#| echo: false
+#| warning: false
+
+hc_disc <- read_csv("data/Results/Prevention/stigma_revised/stigma_all_responses.csv") |>
+  mutate(typo = case_when(is.na(typo) ~ "All",
+                          TRUE ~ typo),
+         county = case_when(is.na(county) ~ "All",
+                            TRUE ~ county) 
+         ) |>
+filter(typo != "All") %>%
+  rename_with(~str_remove(., "avoid_hc_health_provider_discrim___"))
+
+
+hc_disc_long <- hc_disc %>%
+  pivot_longer(cols = -c(county, typo),
+               names_to = "indicator",
+               values_to = "value") %>%
+  mutate(
+    result = case_when(
+      str_detect(indicator, "__p") ~ "point",
+      str_detect(indicator, "lower_ci") ~ "lower",
+      str_detect(indicator, "upper_ci") ~ "upper",
+      TRUE ~ NA_character_
+    ),
+ metric = case_when(
+  str_detect(indicator, "hid__") ~ "Not discriminated because I hide",
+  str_detect(indicator, "no__") ~ "Not discriminated, even though they know",
+  str_detect(indicator, "yes_6mths__") ~ "Discriminated in the last 6 months",
+  str_detect(indicator, "yes_not_6mths__") ~ "Discriminated, but not in the last 6  months",
+  TRUE ~ NA_character_
+)
+
+) %>%
+select(-indicator) %>%
+filter(!is.na(result)) %>%
+pivot_wider(names_from = result, values_from  = value)
+
+
+# Filter and prepare the data
+filtered_data <- hc_disc_long %>%
+  rename(COUNTY = county) %>%
+  filter(COUNTY == county) %>%
+  filter(!is.na(point)) %>%
+  mutate(label_text = paste0(label_percent(accuracy = 1)(point*100)))
+
+hc_disc_typos <- filtered_data %>% distinct(typo) %>% pull(typo)
+
+
+library(RColorBrewer)
+
+# Define the order of the age groups
+metric_order <- unique(hc_disc_long$metric)
+
+
+# Calculate the maximum percentage and add a buffer
+max_percentage <- max(filtered_data$point, na.rm = TRUE)
+buffer <- 0.3
+
+aspect_ratio <- 16 / 9  # adjust this as needed
+width <- 3 * aspect_ratio
+
+# Define the directory and the full file path
+directory <- "data/Results/charts/stigma/"
+hc_discrim_by_kp_age_file_path <- paste0(directory, county, "_hc_discrim_plot.png")
+
+# Check if the directory exists
+if (!dir.exists(directory)) {
+  # Create the directory if it does not exist
+  dir.create(directory, recursive = TRUE)
+}
+
+num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
+plot_height <- if (num_typos > 3) 6 else 4
+plot_width <- if (num_typos > 1) 8 else 5
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
+
+# Check if there are records to plot
+if (nrow(filtered_data) > 0) {
+  
+
+  # Create the plot
+  plot_hc_discrim <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_order), 
+                                         x = point,
+                                         fill = typo, color = typo)) +
+    scale_x_continuous(labels = scales::label_percent(accuracy = 1)) +
+    geom_bar(stat = "identity", position = "dodge", width = 0.9, color = "black") + 
+    geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0.1, 
+                   color = "#666666",
+                   position = position_dodge(width = 0.75)) +
+    facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
+    labs(y = NULL, 
+         x = "% of Participants",
+         caption = "Error bars represent the 95% confidence interval (CI)") +
+    theme_minimal() +
+    geom_text(aes(label = ifelse(is.na(point), 0.0,
+                  format(round(point*100, 1), nsmall = 1)), 
+                  x = ifelse(point*100 < 10, 0.1, 0.01)
+                  ),  # Set x to 0 for centering on axis
+              hjust = 0, 
+              color = "black", size = 4, fontface = "bold") +
+    scale_fill_manual(values = custom_colors) +
+    scale_color_manual(values = custom_colors) +
+    theme(
+      strip.background = element_rect(fill = "#E6AB02", color = "black"),
+      strip.text = element_text(face = "bold", size = 12, color = "black"),  
+      axis.title = element_text(size = 10),  
+      axis.text = element_text(size = 10),
+      axis.text.y = element_text(size = 14),
+      axis.text.x = element_text(size = 8),
+      legend.position = "none",
+      legend.text = element_text(size = 10),
+      panel.grid.major = element_line(size = 0.2),
+      panel.grid.minor.x = element_blank()
+    ) +
+    scale_y_discrete(labels = function(labels) scales::label_wrap(25)(labels))
+
+
+
+
+  # Save the plot as an image in the specified directory
+  ggsave(filename = hc_discrim_by_kp_age_file_path,
+         plot = plot_hc_discrim,
+         width = plot_width,
+         height = plot_height,
+         dpi = 300
+)
+  
+} else {
+  message("No records to plot")
+}
+
+
+
+```
+
+::: {layout-ncol="1"}
+![Discrimination](`r hc_discrim_by_kp_age_file_path `)
+:::
 
 ```{r}
 #| message: false
@@ -1965,13 +1857,14 @@ avoidhc_long <- avoidhc %>%
       TRUE ~ NA_character_
     ),
   metric = case_when(
-      str_detect(indicator, "embarassed") ~ "Avoided health services due to fear of exposure",
+      str_detect(indicator, "embarassed") ~ "Avoided health services due to fear of exposure*",
       str_detect(indicator, "health_provider__") ~ "Avoided disclosure to HIV services provider",
       str_detect(indicator, "health_provider_discrim") ~ "Discriminated by HIV services provider",
       str_detect(indicator, "discrim_") ~ "Avoided HIV services due to worry of discrimination",
       TRUE ~ NA_character_
     )
 ) %>%
+filter(metric != "Discriminated by HIV services provider" ) %>%
 select(-indicator) %>%
 filter(!is.na(result)) %>%
 pivot_wider(names_from = result, values_from  = value)
@@ -2009,8 +1902,9 @@ if (!dir.exists(directory)) {
 }
 
 num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
-plot_height <- if (num_typos > 2) 6 else 3
-plot_width <- if (num_typos > 1) 8 else 4
+plot_height <- if (num_typos > 3) 6 else 4
+plot_width <- if (num_typos > 1) 8 else 5
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
@@ -2023,19 +1917,22 @@ plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_ord
     scale_x_continuous(labels = scales::label_percent(accuracy = 1)) +
     geom_bar(stat = "identity", position = "dodge", width = 0.9, color = "black") + 
     geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0.1, 
-                   color = "darkgray",
+                   color = "#666666",
                    position = position_dodge(width = 0.75)) +
-    facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
-         x = NULL) +
+         x = "% of Participants",
+         caption = "Error bars represent the 95% confidence interval (CI) \n
+         *For MSM this refers to avoided HIV services due to fear of exposure") +
     theme_minimal() +
-    geom_text(aes(label = format(round(point*100,1), nsmall = 1)), 
-              position = position_dodge(width = 0.9), hjust = 0.5, 
+    geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
+              hjust = 0, 
               color = "black", size = 4, fontface = "bold") +
     scale_fill_manual(values = custom_colors) +
     scale_color_manual(values = custom_colors) +
     theme(
-      strip.text = element_text(face = "bold", size = 10, color = "#666666"),  
+      strip.background = element_rect(fill = "#E6AB02", color = "black"),
+      strip.text = element_text(face = "bold", size = 12, color = "black"),  
       axis.title = element_text(size = 10),  
       axis.text = element_text(size = 10),
       axis.text.y = element_text(size = 14),
@@ -2045,14 +1942,14 @@ plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_ord
       panel.grid.major = element_line(size = 0.2),
       panel.grid.minor.x = element_blank()
     ) +
-    scale_y_discrete(labels = function(labels) scales::label_wrap(30)(labels))
+    scale_y_discrete(labels = function(labels) scales::label_wrap(25)(labels))
 
 
 
   # Save the plot as an image in the specified directory
   ggsave(filename = avoidhc_by_kp_age_file_path, 
        plot = plot_avoidhc, 
-         width = 8, 
+         width = plot_width, 
          height = plot_height, 
          dpi = 300
 )
@@ -2170,17 +2067,19 @@ if (nrow(filtered_data) > 0) {
   } else {
     # Bar plot
     plot_condoms <- ggplot(filtered_data, aes(x = typo, y = point, fill = typo, color = typo)) +
-      geom_bar(stat = "identity", position = position_dodge(width = 0.75), width = 0.7, color = "black") +  
+      geom_bar(stat = "identity", position = position_dodge(width = 0.70), width = 0.7, color = "black") +  
       geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
-                    color = "darkgray", position = position_dodge(width = 0.75)) +
+                    color = "#666666", position = position_dodge(width = 0.70)) +
       scale_y_continuous(labels = scales::label_percent(accuracy = 1), 
                          limits = c(0, max_percentage + buffer)) +
-      geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
-                position = position_dodge(width = 0.9), color = "black", vjust = 1.5,
-      size = 3.5, fontface = "bold") +
+      geom_text(aes(label = format(round(point * 100, 1), nsmall = 1), y = 0.01), 
+            position = position_dodge(width = 0.75), 
+            vjust = 0, color = "black", size = 2.5, fontface = "bold") +
       scale_fill_manual(values = custom_colors) +
       scale_color_manual(values = custom_colors) +
-      labs(y = element_blank(), x = element_blank()) +
+      labs(y = "% of Participants", 
+           x = NULL,
+           caption = "Error bars represent the 95% confidence interval (CI)") +
       theme_minimal() +
       theme(
         strip.text = element_text(face = "bold", size = 10),  
@@ -2298,30 +2197,30 @@ plot_height <- if (num_typos > 3) 6 else 3
 plot_width <- if (num_typos > 1) 8 else 5
 legend_pos <- if (num_typos < 3) "right" else "top"
 
+caption_info1 <- "Error bars represent the 95% confidence interval (CI)"
+caption_info2 <- str_wrap("For FSW one-time clients, condom use at last encounter was based on the response of ‘Always’ using a condom with a one-time client in the last 3 months.",
+                          width = 100)
+
 # Check if there are records to plot
 if (nrow(condom_use) > 0) {
-  
-
-  plot_condom_use <- ggplot(condom_use, aes(x = typo, 
-                                          y = point,
-                                          fill = partner)) +
-  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6, color = "black") +  
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
-                color = "darkgray",
-                position = position_dodge(width = 0.75)) +  
-  geom_text(aes(label = format(round(point * 100, 1), nsmall = 1)), 
-            position = position_dodge(width = 0.75), 
-            vjust = -0.5, color = "black", size = 4.0, fontface = "bold") +
-  labs(y = element_blank(),
-       x = element_blank()) +
+  plot_condom_use <- ggplot(condom_use, aes(x = typo, y = point, fill = partner)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6, color = "black") +
+    geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
+                  color = "#666666", position = position_dodge(width = 0.75)) +
+    geom_text(aes(label = format(round(point * 100, 1), nsmall = 1), y = 0.01), 
+              position = position_dodge(width = 0.75), vjust = 0, color = "black", size = 4, fontface = "bold") +
+    labs(
+      y = "% of Participants",
+      x = NULL,  # Use NULL instead of element_blank()
+      caption = paste(caption_info1, caption_info2, sep = "\n\n")
+    ) +
   theme_minimal() +
   theme(
     strip.text = element_text(face = "bold", size = 12),  
     axis.title = element_text(size = 12),  
     axis.text.x = element_text(size = 12),
     axis.text.y = element_text(size = 10),
-    axis.title.y = element_blank(),
     panel.grid = element_blank(),
     legend.position = legend_pos,
     legend.title = element_blank(),
@@ -2330,12 +2229,13 @@ if (nrow(condom_use) > 0) {
 
 
 
+
   
   # Save the plot as an image in the specified directory
   ggsave(filename = condom_use_file_path, 
           plot = plot_condom_use, 
-          width = plot_width, 
-          height = plot_height, 
+          width = 8, 
+          height = 4,
           dpi = 300 
 )
   
@@ -2413,8 +2313,9 @@ filtered_data <- prep_long %>%
 
 prep_typos <- filtered_data %>% distinct(typo) %>% pull(typo)
 num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
-plot_height <- if (num_typos > 2) 4 else 2
-plot_width <- if (num_typos > 1) 8 else 4
+plot_height <- if (num_typos > 3) 6 else 4
+plot_width <- if (num_typos > 1) 8 else 5
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 
 library(RColorBrewer)
@@ -2449,19 +2350,20 @@ if (nrow(filtered_data) > 0) {
                        limits = c(0, max_percentage + buffer)) +
     geom_bar(stat = "identity", position = "dodge", color = "black") +  
     geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.1, 
-                color = "darkgray",
+                color = "#666666",
                 position = position_dodge(width = 0.75)) + 
-    facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
+    facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = element_blank(),
-         x = element_blank()) +
+         x = "% of Participants") +
     theme_minimal() +
-    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
-              position = position_dodge(width = 0.9), hjust = -0.5, color = "black", size = 4,fontface = "bold") +
+    geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
+              hjust = 0, 
+              color = "black", size = 4, fontface = "bold") +
     scale_fill_manual(values = custom_colors) +
     scale_color_manual(values = custom_colors) +  
     theme(
-      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
-      strip.text = element_text(face = "bold", size = 10),  
+      strip.background = element_rect(fill = "#E6AB02", color = "black"),
+      strip.text = element_text(face = "bold", size = 12, color = "black"),  
       axis.title = element_text(size = 10),  
       axis.text = element_text(size = 10),
       axis.text.y = element_text(size = 12),
@@ -2469,8 +2371,8 @@ if (nrow(filtered_data) > 0) {
       legend.position = "none",
       legend.text = element_text(size = 10),
       panel.grid = element_blank() 
-    ) # +
-    # scale_y_discrete(labels = scales::label_wrap(8))
+    )  +
+    scale_y_discrete(labels = scales::label_wrap(25))
 
 
   # Save the plot as an image in the specified directory
@@ -2493,7 +2395,7 @@ Overall, knowledge of PrEP is high across all key population subgroups, with the
 ![PrEP knowledge and use](`r prep_by_kp_age_file_path `)
 :::
 
-### PWID - Medication-Assisted Treatment
+### Medication-Assisted Treatment among PWID
 
 ```{r}
 #| message: false
@@ -2502,7 +2404,7 @@ Overall, knowledge of PrEP is high across all key population subgroups, with the
 #| warning: false
 
 
-oat <- read_csv("data/Results/Prevention/2024-10-09/oat-report.csv") |>
+oat <- read_csv("data/Results/Prevention/oat_revised/oat-report.csv") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
@@ -2523,9 +2425,11 @@ oat_long <- oat %>%
       TRUE ~ NA_character_
     ),
   metric = case_when(
-      str_detect(indicator, "oat_aware_of_drug_tx_prog") ~ "Aware of drug Tx program",
-      str_detect(indicator, "oat_ever_been_drug_tx_prog") ~ "Ever been on a drug Tx program",
-      str_detect(indicator, "oat_in_drug_tx_prog_12mon") ~ "In a drug Tx program < 12 months",
+      str_detect(indicator, "oat_aware_of_drug_tx_prog") ~ "Aware of drug treatment program",
+      str_detect(indicator, "oat_ever_been_drug_tx_prog") ~ "Ever been in a drug treatment program",
+      str_detect(indicator, "oat_in_drug_tx_prog_12mon") ~ "In a drug treatment program in the past 12 months",
+      str_detect(indicator, "oat_opioid__") ~ "Reported injecting opioid-class drugs",
+      str_detect(indicator, "oat_receive_med_12mon_opioid") ~ "Received medication for opioid therapy",
       TRUE ~ NA_character_
     )
 ) %>%
@@ -2542,15 +2446,17 @@ filtered_data <- oat_long %>%
   mutate(label_text = paste0(label_percent(accuracy = 1)(point*100)))
 
 
+filtered_data_oat_one <- filtered_data %>%
+  filter(metric %in% c("Aware of drug treatment program", "Ever been in a drug treatment program", "In a drug treatment program in the past 12 months"))
 
 library(RColorBrewer)
 
 # Define the order of the age groups
-metric_order <- unique(prep_long$metric)
+metric_order <- unique(filtered_data_oat_one$metric)
 
 
 # Calculate the maximum percentage and add a buffer
-max_percentage <- max(filtered_data$point, na.rm = TRUE)
+max_percentage <- max(filtered_data_oat_one$point, na.rm = TRUE)
 buffer <- 0.2 
 
 # Define the directory and the full file path
@@ -2564,38 +2470,126 @@ if (!dir.exists(directory)) {
 }
 
 # Check if there are records to plot
-if (nrow(filtered_data) > 0) {
+if (nrow(filtered_data_oat_one) > 0) {
   
 
   # Create the plot
-  plot_oat <- ggplot(filtered_data, aes(y = population, 
-                                         x = metric,
+  plot_oat_one <- ggplot(filtered_data_oat_one, aes(x = metric, 
+                                         y = point,
                                          fill = typo, color = typo)) +
-    geom_bar(stat = "identity", position = position_dodge(width = 0.6), width = 0.7, color = "black") +
-    facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
-    labs(y = element_blank(),
-         x = element_blank()) +
-    theme_minimal() +
-    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
-              position = position_dodge(width = 0.7), color = "black", size = 3.5,fontface = "bold", vjust = 1.5) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.75), 
+           width = 0.7, color = "black") +   
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
+                color = "#666666",
+                position = position_dodge(width = 0.75)) +  
+  geom_text(aes(label = format(round(point * 100, 1), nsmall = 1), y = 0.01), 
+            position = position_dodge(width = 0.75), 
+            vjust = 0, color = "black", size = 3.5, fontface = "bold") +  # Adjust y position and vjust for label at bar base
+  labs(y = "% of Population",
+       x = element_blank(),
+       caption = "Error bars represent the 95% confidence interval (CI)") +
+  theme_minimal() +
     scale_fill_manual(values = custom_colors) +
-    scale_color_manual(values = custom_colors) +  
-    theme(
-      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
-      strip.text = element_text(face = "bold", size = 10),  
-      axis.title = element_text(size = 10),  
-      axis.text = element_text(size = 10),
-      axis.text.y = element_text(size = 12),
-      legend.position = "none",
-      legend.text = element_text(size = 10),
-      panel.grid = element_blank() 
-    )  +
-    scale_x_discrete(labels = scales::label_wrap(18))
+    scale_color_manual(values = custom_colors) + 
+  theme(
+    axis.title = element_text(size = 10),  
+    axis.text = element_text(size = 10),
+    axis.text.y = element_text(size = 6),
+    legend.position = "none",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(size = 0.2),
+    panel.grid.minor.x = element_blank()
+  )+
+    scale_x_discrete(labels = scales::label_wrap(20))
+
 
 
   # Save the plot as an image in the specified directory
   ggsave(filename = oat_by_kp_age_file_path, 
-          plot = plot_oat, 
+          plot = plot_oat_one, 
+          width = 5, height = 3, 
+          dpi = 300
+)
+  
+} else {
+  message("No records to plot")
+}
+
+
+```
+
+```{r}
+#| message: false
+#| results: hide
+#| echo: false
+#| warning: false
+
+
+filtered_data_oat_two <- filtered_data %>%
+  filter(!metric %in% c("Aware of drug treatment program", "Ever been in a drug treatment program", "In a drug treatment program in the past 12 months"))
+
+library(RColorBrewer)
+
+# Define the order of the age groups
+metric_order <- unique(filtered_data_oat_two$metric)
+
+
+# Calculate the maximum percentage and add a buffer
+max_percentage <- max(filtered_data_oat_two$point, na.rm = TRUE)
+buffer <- 0.2 
+
+# Define the directory and the full file path
+directory <- "data/Results/charts/oat/"
+oat_by_kp_age_file_path_two <- paste0(directory, county, "_prep_plot_two.png")
+
+# Check if the directory exists
+if (!dir.exists(directory)) {
+  # Create the directory if it does not exist
+  dir.create(directory, recursive = TRUE)
+}
+
+# Check if there are records to plot
+if (nrow(filtered_data_oat_two) > 0) {
+  
+
+  # Create the plot
+  plot_oat_two <- ggplot(filtered_data_oat_two, aes(x = fct_reorder(metric, rev(metric_order)), 
+                                         y = point,
+                                         fill = typo, color = typo)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.75), 
+           width = 0.7, color = "black") +   
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1, 
+                color = "#666666",
+                position = position_dodge(width = 0.75)) +  
+  geom_text(aes(label = format(round(point * 100, 1), nsmall = 1), y = 0.01), 
+            position = position_dodge(width = 0.75), 
+            vjust = 0, color = "black", size = 3.5, fontface = "bold") +  # Adjust y position and vjust for label at bar base
+  labs(y = "% of Population",
+       x = element_blank(),
+       caption = "Error bars represent the 95% confidence interval (CI)") +
+  theme_minimal() +
+    scale_fill_manual(values = custom_colors) +
+    scale_color_manual(values = custom_colors) + 
+  theme(
+    axis.title = element_text(size = 10),  
+    axis.text = element_text(size = 10),
+    axis.text.y = element_text(size = 6),
+    legend.position = "none",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12),
+    panel.grid.major = element_line(size = 0.2),
+    panel.grid.minor.x = element_blank()
+  ) +
+    scale_x_discrete(labels = scales::label_wrap(20))
+
+
+
+  # Save the plot as an image in the specified directory
+  ggsave(filename = oat_by_kp_age_file_path_two, 
+          plot = plot_oat_two, 
           width = 5, height = 3, 
           dpi = 300
 )
@@ -2609,6 +2603,10 @@ if (nrow(filtered_data) > 0) {
 
 ::: {layout-ncol="1"}
 ![Medication-Assisted Treatment](`r oat_by_kp_age_file_path `)
+:::
+
+::: {layout-ncol="1"}
+![Medication-Assisted Treatment](`r oat_by_kp_age_file_path_two `)
 :::
 
 ### HIV Testing
@@ -2641,10 +2639,10 @@ hts_long <- hts %>%
     ),
   metric = case_when(
       str_detect(indicator, "ever_tested") ~ "Ever tested",
-      str_detect(indicator, "less_3mths") ~ "Within the last 3 months)",
-      str_detect(indicator, "4_6_mths") ~ "Within 4-6 months go",
-      str_detect(indicator, "7_12_mths") ~ "Within 7-12 months ago",
-      str_detect(indicator, "12_plus") ~ "Over 12 months ago",
+      str_detect(indicator, "less_3mths") ~ "Tested within last 3 months",
+      str_detect(indicator, "4_6_mths") ~ "Tested 4-6 months ago",
+      str_detect(indicator, "7_12_mths") ~ "Tested 7-12 months ago",
+      str_detect(indicator, "12_plus") ~ "Tested >12 months ago",
       TRUE ~ NA_character_
     )
 ) %>%
@@ -2661,8 +2659,9 @@ filtered_data <- hts_long %>%
 
 hts_typos <- filtered_data %>% distinct(typo) %>% pull(typo)
 num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
-plot_height <- if (num_typos > 3) 4 else 2
-plot_width <- if (num_typos > 1) 8 else 4
+plot_height <- if (num_typos > 3) 6 else 4
+plot_width <- if (num_typos > 1) 8 else 5
+facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 
 library(RColorBrewer)
@@ -2688,28 +2687,31 @@ if (!dir.exists(directory)) {
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
   
+  #aes(x = fct_reorder(metric, rev(metric_order))
 
   # Create the plot
-  plot_hts <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_order), 
+  plot_hts <- ggplot(filtered_data, aes(y = factor(metric, levels = rev(metric_order)), 
                                          x = point,
                                          fill = typo, color = typo)) +
     scale_x_continuous(labels = scales::label_percent(accuracy = 1), 
                        limits = c(0, max_percentage + buffer)) +
     geom_bar(stat = "identity", position = "dodge", color = "black") +  
     geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.1, 
-                color = "darkgray",
+                color = "#666666",
                 position = position_dodge(width = 0.75)) + 
-    facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
-    labs(y = element_blank(),
-         x = element_blank()) +
+    facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
+    labs(y = NULL, 
+         x = "% of Participants",
+         caption = "Error bars represent the 95% confidence interval (CI)") +
     theme_minimal() +
-    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
-              position = position_dodge(width = 0.9), hjust = -0.5, color = "black", size = 4,fontface = "bold") +
+    geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
+              hjust = 0, 
+              color = "black", size = 4, fontface = "bold") +
     scale_fill_manual(values = custom_colors) +
-    scale_color_manual(values = custom_colors) +  
+    scale_color_manual(values = custom_colors) +
     theme(
-      #strip.background = element_rect(fill = "#E0E0E0", color = "black"),  
-      strip.text = element_text(face = "bold", size = 10),  
+      strip.background = element_rect(fill = "#E6AB02", color = "black"),
+      strip.text = element_text(face = "bold", size = 12, color = "black"), 
       axis.title = element_text(size = 10),  
       axis.text = element_text(size = 10),
       axis.text.y = element_text(size = 12),
@@ -2717,8 +2719,8 @@ if (nrow(filtered_data) > 0) {
       legend.position = "none",
       legend.text = element_text(size = 10),
       panel.grid = element_blank() 
-    ) # +
-    # scale_y_discrete(labels = scales::label_wrap(8))
+    )  +
+    scale_y_discrete(labels = scales::label_wrap(20))
 
 
   # Save the plot as an image in the specified directory
@@ -2855,14 +2857,14 @@ if (nrow(filtered_data) > 0) {
     scale_y_continuous(labels = scales::label_percent(accuracy = 1), 
                        limits = c(0, max_percentage + buffer)) +
     geom_bar(stat = "identity", position = "dodge", width = 0.7, color = "black") +  
-    geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2, color = "darkgray") +  
+    geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2,  color = "#666666") +  
     #facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
-    labs(y = element_blank(),
+    labs(y = "% of participants",
          x = element_blank()) +
     theme_minimal() +
-    geom_text(aes(label = scales::label_percent(accuracy = 0.1)(point)), 
-              position = position_dodge(width = 0.9), vjust = 1.5,  
-    color = "black", size = 3,fontface = "bold") +
+    geom_text(aes(label = format(round(point * 100, 1), nsmall = 1), y = 0.01), 
+            position = position_dodge(width = 0.75), 
+            vjust = 0, color = "black", size = 2.5, fontface = "bold") +
     scale_fill_manual(values = custom_colors) +
     scale_color_manual(values = custom_colors) +  
     theme(
