@@ -242,6 +242,10 @@ response_rates_table <- overview_data %>%
     align = "right",
     columns = -c(TYPOLOGY)
   ) %>%
+  fmt_number(
+    columns = -c(TYPOLOGY),
+    decimals = 0
+  ) %>%
   # Style the column headers
   tab_style(
     style = list(
@@ -504,6 +508,10 @@ prev_supp_pse_table <- prevalence_suppression_pse %>%
   tab_footnote(
     footnote = "Viral suppression is among all HIV positive individuals regardless of knowledge of HIV status or use of ART",
     locations = cells_column_labels(columns = suppression)
+  ) %>%
+  tab_footnote(
+    footnote = "Using the anchored multiplier method",
+    locations = cells_column_labels(columns = pse)
   )
 
 # Define the directory and the full file path
@@ -614,7 +622,7 @@ dist_plot <- ggplot(age_dist, aes(x = factor(age),
             color = "black", size = 3.5, fontface = "bold") +  
   scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
   facet_wrap(~ typo, nrow = facet_rows, scales = "fixed") +
-  labs(y = "Proportion (%)",
+  labs(y = "Distribution of ages (%)",
        x = "Age (years)",
        caption = "Error bars represent the 95% confidence interval (CI)"
        ) +
@@ -757,7 +765,7 @@ if (nrow(filtered_data) > 0) {
     labels = scales::label_percent(accuracy = 1)
   ) +
   facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
-  labs(y = "Proportion (%)",
+  labs(y = "HIV Prevalence (%)",
        x = "Age (years)",
        caption = "Error bars represent the 95% confidence interval (CI) \n
                   * Number suppressed due to small values"
@@ -882,7 +890,7 @@ plot_supp_200 <- ggplot(filtered_data, aes(x = factor(supp_age),
     labels = scales::label_percent(accuracy = 1)
   ) + 
   facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
-  labs(y = "Proportion (%)",
+  labs(y = "Viral Load Suppression (% <200 copies per milliliter)",
        x = "Age (years)",
        caption = "Error bars represent the 95% confidence interval (CI) \n
                    * Number suppressed due to small values \n
@@ -1431,7 +1439,7 @@ if (nrow(sti_data_pos) > 0) {
                 y = 0.01), 
             position = position_dodge(width = 0.75), 
             vjust = 0, color = "black", size = 3.5, fontface = "bold") +  # Adjust y position and vjust for label at bar base
-  labs(y = "STI Prevalence (%)",
+  labs(y = "Prevalence (%)",
        x = element_blank(),
        caption = "Error bars represent the 95% confidence interval (CI). \n
        * Number suppressed due to small values") +
@@ -1640,7 +1648,7 @@ if (nrow(filtered_data) > 0) {
                    position = position_dodge(width = 0.75)) +
     facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
-         x = "% of Participants",
+         x = "Percent who experience stigma",
          caption = "Error bars represent the 95% confidence interval (CI)") +
     theme_minimal() +
     geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
@@ -1782,7 +1790,7 @@ if (nrow(filtered_data) > 0) {
                    position = position_dodge(width = 0.75)) +
     facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
-         x = "% of Participants",
+         x = "Percent discriminated due to behavior or gender identity",
          caption = "Error bars represent the 95% confidence interval (CI)") +
     theme_minimal() +
     geom_text(aes(label = ifelse(is.na(point), 0.0,
@@ -1921,7 +1929,7 @@ plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_ord
                    position = position_dodge(width = 0.75)) +
     facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
-         x = "% of Participants",
+         x = "Percent who avoided health care",
          caption = "Error bars represent the 95% confidence interval (CI) \n
          *For MSM this refers to avoided HIV services due to fear of exposure") +
     theme_minimal() +
@@ -2077,7 +2085,7 @@ if (nrow(filtered_data) > 0) {
             vjust = 0, color = "black", size = 2.5, fontface = "bold") +
       scale_fill_manual(values = custom_colors) +
       scale_color_manual(values = custom_colors) +
-      labs(y = "% of Participants", 
+      labs(y = "Access to free condoms (%)", 
            x = NULL,
            caption = "Error bars represent the 95% confidence interval (CI)") +
       theme_minimal() +
@@ -2211,7 +2219,7 @@ if (nrow(condom_use) > 0) {
     geom_text(aes(label = format(round(point * 100, 1), nsmall = 1), y = 0.01), 
               position = position_dodge(width = 0.75), vjust = 0, color = "black", size = 4, fontface = "bold") +
     labs(
-      y = "% of Participants",
+      y = "Condom use at last sexual encounter (%)",
       x = NULL,  # Use NULL instead of element_blank()
       caption = paste(caption_info1, caption_info2, sep = "\n\n")
     ) +
@@ -2354,7 +2362,7 @@ if (nrow(filtered_data) > 0) {
                 position = position_dodge(width = 0.75)) + 
     facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = element_blank(),
-         x = "% of Participants") +
+         x = "PrEP knowledge and use (%)") +
     theme_minimal() +
     geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
               hjust = 0, 
@@ -2701,7 +2709,7 @@ if (nrow(filtered_data) > 0) {
                 position = position_dodge(width = 0.75)) + 
     facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
-         x = "% of Participants",
+         x = "HIV testing history (%)",
          caption = "Error bars represent the 95% confidence interval (CI)") +
     theme_minimal() +
     geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
@@ -2859,7 +2867,7 @@ if (nrow(filtered_data) > 0) {
     geom_bar(stat = "identity", position = "dodge", width = 0.7, color = "black") +  
     geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2,  color = "#666666") +  
     #facet_wrap(~ typo,  ncol = 2, scales = "fixed") +
-    labs(y = "% of participants",
+    labs(y = "Percentage",
          x = element_blank()) +
     theme_minimal() +
     geom_text(aes(label = format(round(point * 100, 1), nsmall = 1), y = 0.01), 
