@@ -1,6 +1,6 @@
 ---
 params:
-  county: "Mombasa"
+  county: "Nairobi"
   survey_name: "Biobehavioral Survey"
   population: "Key Populations"
 title: "BIOBEHAVIORAL SURVEY AMONG KEY POPULATIONS IN `r stringr::str_to_upper(params$county)`, KENYA, 2024"
@@ -326,7 +326,7 @@ Understanding the prevalence of HIV among key populations is crucial for tailori
 #| echo: false
 #| warning: false
 
-prev_data <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
+prev_data <- rio::import("data/Results/Prevalence_Suppression_VL16_12_24.xlsx",
                          sheet = "Prev_County_Typo") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -343,7 +343,7 @@ prev_data <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx"
   )|>
   rename_with(~ paste0("prev_", .), .cols = -c(county, typo, prevalence))
 
-supp_data <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
+supp_data <- rio::import("data/Results/Prevalence_Suppression_VL16_12_24.xlsx",
                          sheet = "Vl(200)_County_Typo") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -503,7 +503,7 @@ prev_supp_pse_table <- prevalence_suppression_pse %>%
   ) %>%
   tab_footnote(
     footnote = "Viral suppression is among all HIV positive individuals regardless of knowledge of HIV status or use of ART",
-    locations = cells_column_labels(columns = pse)
+    locations = cells_column_labels(columns = suppression)
   )
 
 # Define the directory and the full file path
@@ -677,7 +677,7 @@ ggsave(filename = demographics_distribution_path,
 #| fig-width: 8
 
 
-prev_age <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
+prev_age <- rio::import("data/Results/Prevalence_Suppression_VL16_12_24.xlsx",
                          sheet = "Prev_County_Typo_Age") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -804,7 +804,7 @@ if (nrow(filtered_data) > 0) {
 #| fig-height: 6
 #| fig-width: 8
 
-supp_age <- rio::import("data/Results/PrevalenceandVLsupression02_12_2024.xlsx",
+supp_age <- rio::import("data/Results/Prevalence_Suppression_VL16_12_24.xlsx",
                          sheet = "Vl(200)_County_Typo_Age") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
@@ -963,7 +963,7 @@ Viral suppression increased with age across all the key population groups except
 #| fig-height: 6
 #| fig-width: 10
 
-cascade_uncond <- rio::import("data/Results/95_95_95/final/results_v1.xlsx",
+cascade_uncond <- rio::import("data/Results/95_95_95/final/results_v2.xlsx",
                                    sheet = "Nonconditional_Clean") |>
 rename(typo = Typology,
 county = County) %>%
@@ -984,7 +984,7 @@ mutate(report = "Unconditional") %>%
               values_from = value)
 
 
-cascade_cond <- rio::import("data/Results/95_95_95/final/results_v1.xlsx",
+cascade_cond <- rio::import("data/Results/95_95_95/final/results_v2.xlsx",
                                    sheet = "Conditional_Clean") |>
 rename(typo = Typology,
 county = County) %>%
@@ -1152,7 +1152,7 @@ cascade_plot <- long_data |>
   geom_bar(stat = "identity", position = "stack", width = 0.6, color = "black") +
   scale_y_continuous(
     labels = scales::label_comma(),
-    breaks = function(x) c(0, max(x)/2, max(x)),  # Show 0, middle, and max
+    breaks = function(x) c(0, max(x)*0.25, max(x)*0.5, max(x)*0.75, max(x)),  # Show 0, middle, and max
     sec.axis = sec_axis(
       ~ normalize(.),
       name = NULL,  # Remove the title for the secondary axis
@@ -1176,7 +1176,7 @@ cascade_plot <- long_data |>
             color = "black", size = 3.5, fontface = "bold") + 
   theme_minimal() +
   labs(x = "Metric", y = "Estimated population", fill = "Category",
-       caption = "Note: Proportions presented are conditional.") +
+       caption = "Note: Proportions presented are conditional") +
   facet_wrap(~ typo, nrow = facet_rows, scales = "free") +
   # Apply the custom color palette and include the gap explanation
   scale_fill_manual(
@@ -1187,10 +1187,10 @@ cascade_plot <- long_data |>
       "Suppressed" = custom_colors_cascade[["Suppressed"]]
     ),
     labels = c(
-      "Gap" = "Gap to target",
-      "Aware" = "Aware",
+      "Gap" = "Gap to target *",
+      "Aware" = "Aware of HIV status",
       "On ART" = "On ART",
-      "Suppressed" = "Suppressed"
+      "Suppressed" = "Virally suppressed"
     )
   ) +
   theme(
