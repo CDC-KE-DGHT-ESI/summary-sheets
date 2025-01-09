@@ -1,17 +1,15 @@
+# Ignore R-related files
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
 
-/.quarto/
-cheat.R
+# Ignore folders
 data/
-/data/
 cheats/
-/cheats/
-sheets/
-/sheets/
-.Rdata
-.httr-oauth
+
+# Ignore Quarto-related files
+/.quarto/
+
+# Ignore other system files
 .DS_Store
-.quarto
