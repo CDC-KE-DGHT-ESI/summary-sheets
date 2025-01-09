@@ -28,13 +28,13 @@ The project requires the 2024 Bio-Behavioral Survey data. Ensure the data files 
 Clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/danielmaangi/summary-sheets.git
-cd summary-sheets
+git clone https://github.com/CDC-KE-DGHT-ESI/bbs-summary-sheets.git
+cd bbs-summary-sheets
 ```
 
 ## Running the code
 - To run the code, you need the data folder. This can be shared upon request.
-- Open *bbs-summary-sheets.qmd* and click render to generate the summary sheet for the specified in the YAML header. By default this is Nairobi.
+- Open *summary-sheets.qmd* and click render to generate the summary sheet for the specified in the YAML header. By default this is Nairobi.
 - Use *render_reports.R* to generate summary sheets for all counties. You also specify the specific report in this code.
 
 
