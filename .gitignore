@@ -6,8 +6,11 @@
 /.quarto/
 cheat.R
 data/
+/data/
 cheats/
+/cheats/
 sheets/
+/sheets/
 .Rdata
 .httr-oauth
 .DS_Store
