@@ -222,7 +222,7 @@ response_rates_table <- overview_data %>%
   # janitor::adorn_totals() %>%
   mutate(COUNTY = str_to_sentence(COUNTY),
          `Response rate` = label_percent(accuracy = .1)(CONSENTED / ELIGIBLE))%>%
-  select(TYPOLOGY, `Sample size`, SCREENED, ELIGIBLE, CONSENTED, BLOOD_COLLECTED, INTERVIEWED) %>%
+  select(TYPOLOGY, `Sample size`, SCREENED, ELIGIBLE, CONSENTED, BLOOD_COLLECTED, INTERVIEWED, BLOOD_COLLECTED_REAL) %>%
   gt() %>%
   tab_style(
     style = list(cell_borders(sides = "all", color = "gray", weight = px(1)),
@@ -236,7 +236,8 @@ response_rates_table <- overview_data %>%
     ELIGIBLE = html("Eligible"),
     CONSENTED = html("Consented <br> for <br> Interview"),
     BLOOD_COLLECTED = html("Consented <br> for <br> Blood Draw"),
-    INTERVIEWED = html("Interviewed")
+    INTERVIEWED = html("Interviewed"),
+    BLOOD_COLLECTED_REAL = html("Blood Collected")
   ) %>%
    cols_align(
     align = "right",
