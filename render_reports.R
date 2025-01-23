@@ -20,7 +20,7 @@ counties <- county_data |>
   distinct(COUNTY) |> 
   pull()
 
-counties <- c("Nairobi") #All
+counties <- c("All") #All
 
 
 # Render the Quarto document for each county
