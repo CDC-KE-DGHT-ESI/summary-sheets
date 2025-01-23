@@ -398,6 +398,7 @@ cps_combo <- cps |>
          county = case_when(is.na(County) ~ "All",
                             TRUE ~ County) 
          ) |>
+  mutate(dplyr::across(c(N, Low, High), ~round(.x, -2))) %>%
   mutate(pse = paste0(comma(N), " (", comma(Low), "-", comma(High), ")"))
 
 
@@ -406,7 +407,7 @@ prevalence_suppression_pse <- prev_data |>
   full_join(supp_data, by = c("county" = "county", "typo" = "typo")) |>
   full_join(cps_combo) |>
   select(county, typo, prevalence, suppression, pse) |>
-  filter(typo != "All")
+  filter(typo != "All") 
 
 
 ```
@@ -2627,7 +2628,7 @@ if (nrow(filtered_data_oat_two) > 0) {
 #| warning: false
 
 
-hts <- read_csv("data/Results/Prevention/2024-10-09/hx-report.csv") |>
+hts <- read_csv("data/Results/Prevention/2025-01-22/hx-report.csv") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
