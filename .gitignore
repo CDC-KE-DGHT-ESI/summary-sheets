@@ -13,3 +13,8 @@ cheats/
 
 # Ignore other system files
 .DS_Store
+
+# Ignore reports (.docx)
+BBS_REPORT*
+Summary Sheets*
+Updated*

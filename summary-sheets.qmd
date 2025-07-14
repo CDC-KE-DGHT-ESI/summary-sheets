@@ -1,6 +1,6 @@
 ---
 params:
-  county: "Nairobi"
+  county: "Kajiado"
   survey_name: "Biobehavioral Survey"
   population: "Key Populations"
 title: "BIOBEHAVIORAL SURVEY AMONG KEY POPULATIONS IN `r stringr::str_to_upper(params$county)`, KENYA, 2024"
@@ -27,6 +27,7 @@ notebook-links: false
 #| echo: false
 #| warning: false
 
+min_sample <- 25
 county <- ifelse(is.null(params$county), 'All', params$county)
 survey_name <- params$survey_name
 population <- params$population
@@ -64,6 +65,7 @@ library(prettyunits)
 library(tidytext)
 library(RColorBrewer)
 library(stringr)
+library(chromote)
 ```
 
 ```{r}
@@ -283,11 +285,11 @@ response_rates_table <- overview_data %>%
   # General table settings
   tab_options(
     table.font.names = "Cambria",
-    table.font.size = px(22),
+    table.font.size = px(17.5),
     table.border.top.width = px(2),
     table.border.bottom.width = px(2),
     data_row.padding = px(10),
-    table.width = pct(80)
+    table.width = pct(85)
   ) %>%
   # Enable row striping for better readability
   opt_row_striping() %>%
@@ -317,7 +319,7 @@ gtsave(response_rates_table, filename = response_rates_table_file_path,
 
 ```
 
-![](`r response_rates_table_file_path `)
+![](`r response_rates_table_file_path`)
 
 The sample size was achieved for all the key population groups except in PWIDS. Of the 2352 individuals screened, 92% (2154) were found to be eligible. Everyone eligible to participate in the study consented to the interview.
 
@@ -487,11 +489,11 @@ prev_supp_pse_table <- prevalence_suppression_pse %>%
   # General table settings
   tab_options(
     table.font.names = "Cambria",
-    table.font.size = px(22),
+    table.font.size = px(17.5),
     table.border.top.width = px(2),
     table.border.bottom.width = px(2),
     data_row.padding = px(10),
-    table.width = pct(80)
+    table.width = pct(85)
   ) %>%
   # Enable row striping for better readability
   opt_row_striping() %>%
@@ -533,7 +535,7 @@ gtsave(prev_supp_pse_table, filename = prev_supp_pse_table_file_path,
 
 ```
 
-![](`r prev_supp_pse_table_file_path `)
+![](`r prev_supp_pse_table_file_path`)
 
 HIV prevalence is highest among the TG (25.5%) and lowest among the PWIDS (10.3%). The prevalence for MSM is 18.7% and FSW 21.9%. HIV Viral load suppression rate is highest among TG at 82.3% while PWID, MSM, and FSW suppression rates are 78.8%, 76.9%, and 77.7% respectively. Population size estimates are 8386 among FSW, 2906 among MSM, 2811 among PWID, and 1524 among TG.
 
@@ -668,7 +670,7 @@ ggsave(filename = demographics_distribution_path,
 ```
 
 ::: {layout-ncol="1"}
-![Age distribution of respondents by key population group](`r demographics_distribution_path `)
+![Age distribution of respondents by key population group](`r demographics_distribution_path`)
 :::
 
 -   FSW: The median age of FSWs is around `r fsw_median_age` `r fsw_iqr_age` years.
@@ -693,8 +695,12 @@ prev_age <- rio::import("data/Results/Prevalence_Suppression_VL16_12_24.xlsx",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
                             TRUE ~ county) 
-         ) |>
+         ) |>mutate(
+    lower = if_else(sample < min_sample, NA, lower),
+    upper = if_else(sample < min_sample, NA, upper)
+  ) %>%
   mutate(
+  point = if_else(sample < min_sample, NA, point),
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
   upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
   ) |>
@@ -753,32 +759,40 @@ facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
   
-  # Create the plot
-  plot_prev <- ggplot(filtered_data, aes(x = factor(prev_age), 
-                                       y = prev_point,
-                                       fill = typo, color = typo)) +  
+
+# Check if any prev_point values are NA
+has_na <- any(is.na(filtered_data$prev_point))
+
+# Construct the caption based on the presence of NA values
+caption_text <- ifelse(
+  has_na,
+  "Error bars represent the 95% confidence interval (CI) \n\n *Estimates based on a denominator less than 25 have been suppressed",
+  "Error bars represent the 95% confidence interval (CI)"
+)
+
+plot_prev <- ggplot(filtered_data, aes(x = factor(prev_age),
+                                     y = prev_point,
+                                     fill = typo, color = typo)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6, color = "black") +
-  geom_errorbar(aes(ymin = prev_lower, ymax = prev_upper), width = 0.2,  color = "#666666") +  
-  geom_text(aes(label = ifelse(is.na(prev_point), "*", 
-                               format(round(prev_point * 100, 1), nsmall = 1)), y = 0), 
-            position = position_dodge(width = 0.7), vjust = -0.5, 
-            color = "black", size = 3.5, fontface = "bold") +   
+  geom_errorbar(aes(ymin = prev_lower, ymax = prev_upper), width = 0.2, color = "#666666") +
+  geom_text(aes(label = ifelse(is.na(prev_point), "*",
+                               format(round(prev_point * 100, 1), nsmall = 1)), y = 0),
+            position = position_dodge(width = 0.7), vjust = -0.5,
+            color = "black", size = 3.5, fontface = "bold") +
   scale_y_continuous(
     labels = scales::label_percent(accuracy = 1)
   ) +
-  facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
+  facet_wrap(~ typo, nrow = facet_rows, scales = "fixed") +
   labs(y = "HIV Prevalence (%)",
        x = "Age (years)",
-       caption = "Error bars represent the 95% confidence interval (CI) \n
-                  * Number suppressed due to small values"
-       ) +
+       caption = caption_text) + # Use the conditional caption
   theme_minimal() +
   scale_fill_manual(values = custom_colors) +
-  scale_color_manual(values = custom_colors) +   
+  scale_color_manual(values = custom_colors) +
   theme(
     strip.background = element_rect(fill = "#E6AB02", color = "black"),
     strip.text = element_text(face = "bold", size = 12, color = "black"),
-    axis.title = element_text(size = 10),  
+    axis.title = element_text(size = 10),
     axis.text = element_text(size = 10),
     axis.text.y = element_text(size = 6),
     legend.position = "none",
@@ -789,8 +803,6 @@ if (nrow(filtered_data) > 0) {
   )
 
 
-
-  
   # Save the plot as an image in the specified directory
   ggsave(filename = prevalence_by_kp_age_file_path, 
                  plot = plot_prev, 
@@ -815,13 +827,18 @@ if (nrow(filtered_data) > 0) {
 #| fig-width: 8
 
 supp_age <- rio::import("data/Results/Prevalence_Suppression_VL16_12_24.xlsx",
-                         sheet = "Vl(200)_County_Typo_Age") |>
+                         sheet = "Vl(200)_County_Typo_Age_Revised") |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
                             TRUE ~ county) 
          ) |>
   mutate(
+    lower = if_else(sample < min_sample, NA, lower),
+    upper = if_else(sample < min_sample, NA, upper)
+  ) %>%
+  mutate(
+  point = if_else(sample < min_sample, NA, point),
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
   upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
   ) |>
@@ -832,8 +849,6 @@ supp_age <- rio::import("data/Results/Prevalence_Suppression_VL16_12_24.xlsx",
     lower = lower/100,
     upper = upper/100
   )|>
-tidyr::complete(county, typo, age, 
-                  fill = list(point = NA_real_, lower = NA_real_, upper = NA_real_)) %>%
   rename_with(~ paste0("supp_", .), .cols = -c(county, typo, suppression)) 
 
 
@@ -846,10 +861,7 @@ age_order <- unique(supp_age$supp_age)
 filtered_data <- supp_age %>%
   rename(COUNTY = county) %>%
   filter(COUNTY == county) %>%
-  mutate(label_text = paste0(label_percent(accuracy = 1)(supp_point))) %>%
-  filter(!is.na(supp_point)) %>%
-  tidyr::complete(COUNTY, typo, supp_age,  
-      fill = list(COUNTY = county, supp_point = NA_real_, supp_lower = NA_real_, supp_upper = NA_real_))
+  mutate(label_text = paste0(label_percent(accuracy = 1)(supp_point))) 
 
   # Calculate a scaling factor based on the ranges of supp_point and weighted_N
 scale_factor <- (max(filtered_data$supp_weighted_N, na.rm = TRUE)) * 
@@ -877,6 +889,15 @@ facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
   
+  # Check if any supp_point values are NA
+has_na <- any(is.na(filtered_data$supp_point))
+
+# Construct the caption based on the presence of NA values
+caption_text <- ifelse(
+  has_na,
+  "Error bars represent the 95% confidence interval (CI) \n\n Viral suppression is among all HIV positive individuals \n regardless of knowledge of HIV status or use of ART \n\n *Estimates based on a denominator less than 25 have been suppressed",
+  "Error bars represent the 95% confidence interval (CI) \n\n Viral suppression is among all HIV positive individuals \n regardless of knowledge of HIV status or use of ART"
+)
 
 plot_supp_200 <- ggplot(filtered_data, aes(x = factor(supp_age), 
                                            y = supp_point,
@@ -894,9 +915,7 @@ plot_supp_200 <- ggplot(filtered_data, aes(x = factor(supp_age),
   facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
   labs(y = "Viral Load Suppression (% <200 copies per milliliter)",
        x = "Age (years)",
-       caption = "Error bars represent the 95% confidence interval (CI) \n
-                   * Number suppressed due to small values \n
-       Viral suppression is among all HIV positive individuals regardless of knowledge of HIV status or use of ART"
+       caption = caption_text
        ) +
   theme_minimal() +
   scale_fill_manual(values = custom_colors) +
@@ -953,13 +972,13 @@ combined_plot_age_file_path <- paste0(directory2, county, "_200_plot.png")
 ### HIV Prevalence by Key Population Group and Age
 
 ::: {layout-ncol="1"}
-![HIV Prevalence](`r prevalence_by_kp_age_file_path `)
+![HIV Prevalence](`r prevalence_by_kp_age_file_path`)
 :::
 
 ### Viral Load suppression by Key Population Group and Age
 
 ::: {layout-ncol="1"}
-![Viral load suppression](`r suppression_200_by_kp_age_file_path `)
+![Viral load suppression](`r suppression_200_by_kp_age_file_path`)
 :::
 
 Viral suppression increased with age across all the key population groups except in TG, where it was lowest among individuals aged 45 years and above
@@ -973,63 +992,46 @@ Viral suppression increased with age across all the key population groups except
 #| fig-height: 6
 #| fig-width: 10
 
-cascade_uncond <- rio::import("data/Results/95_95_95/final/results_v2.xlsx",
-                                   sheet = "Nonconditional_Clean") |>
+cascade_uncond <- rio::import("data/Results/95_95_95/final/95-95-95 Cascade June 2025.xlsx",
+                                   sheet = "Unconditional") |>
 rename(typo = Typology,
-county = County) %>%
+       county = County) %>%
 # separate(prev_typo, c("county","typo")) |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
+                            TRUE ~ county)
          ) |>
-mutate(report = "Unconditional") %>%
-  pivot_longer(cols = -c(county, typo, report)) %>%
-  separate(name, c("indicator", "metric"), sep = "_") %>%
-  mutate(
-    metric = case_when(str_detect(metric, "%") ~ "point",
-                       TRUE ~ metric)
-  ) %>%
-  pivot_wider(names_from = metric,
-              values_from = value)
+mutate(report = "Unconditional") 
 
 
-cascade_cond <- rio::import("data/Results/95_95_95/final/results_v2.xlsx",
-                                   sheet = "Conditional_Clean") |>
+cascade_cond <- rio::import("data/Results/95_95_95/final/95-95-95 Cascade June 2025.xlsx",
+                                   sheet = "Conditional") |>
 rename(typo = Typology,
-county = County) %>%
+       county = County) %>%
 # separate(prev_typo, c("county","typo")) |>
   mutate(typo = case_when(is.na(typo) ~ "All",
                           TRUE ~ typo),
          county = case_when(is.na(county) ~ "All",
-                            TRUE ~ county) 
+                            TRUE ~ county)
          ) |>
-mutate(report = "Conditional") %>%
-  pivot_longer(cols = -c(county, typo, report)) %>%
-  separate(name, c("indicator", "metric"), sep = "_") %>%
-  mutate(
-    metric = case_when(str_detect(metric, "%") ~ "point",
-                       TRUE ~ metric)
-  ) %>%
-  pivot_wider(names_from = metric,
-              values_from = value)
+mutate(report = "Conditional") 
 
 
 cascade <- bind_rows(cascade_uncond, cascade_cond) %>%
-  rename(lower = `lower ci`,
-         upper = `upper ci`,
-         weighted_N = weightedN,
-         weighted_D = weightedD) %>%
+  rename(indicator = `95_Cascade`) %>%
   mutate(
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
   upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
   ) %>%
-  mutate(
-    indicator = case_when(indicator == "VLS<200" ~ "Suppressed",
-                          TRUE ~ indicator
-                          )
+  filter(indicator != "VLS<1000") %>%
+  mutate(indicator = case_when(
+    indicator %in% c("Awareness","Aware_of_HIV_Status" ) ~ "Aware",
+    indicator %in% c("On_ART", "On ART") ~ "On ART",
+    indicator %in% c("VLS<200") ~ "Suppressed")
   ) %>%
-  filter(indicator != "VLS<1000")
+  filter(!is.na(indicator)) %>%
+  filter(age_band == "Overall")
 
 
 ```
@@ -1092,7 +1094,7 @@ filtered_data_labels <- cascade %>%
 
 num_typos <- filtered_data %>% distinct(typo) %>% pull(typo) %>% length()
 plot_height <- if (num_typos > 3) 6 else 4
-plot_width <- if (num_typos > 1) 8 else 4
+plot_width <- if (num_typos > 1) 8 else 6
 facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 
 
@@ -1170,13 +1172,6 @@ cascade_plot <- long_data |>
       labels = NULL  # Remove labels for the secondary axis
     )
   ) +
-  # geom_text(aes(label = ifelse(type == "weighted_N", 
-  #                    round(cond_point, 1), "")),
-  #           vjust = 0.01, 
-  #           color = "black", 
-  #           size = 4, 
-  #           facefont = "bold",
-  #           position = position_stack(vjust = 0.5)) +
   geom_text(aes(label = ifelse(type == "weighted_N", 
                      format(round(cond_point, 1), nsmall = 1), "*"), 
                 y = ifelse(cond_point < 10, 0.05, 0.01)
@@ -1188,7 +1183,6 @@ cascade_plot <- long_data |>
   labs(x = "Metric", y = "Estimated population", fill = "Category",
        caption = "Note: Proportions presented are conditional") +
   facet_wrap(~ typo, nrow = facet_rows, scales = "free") +
-  # Apply the custom color palette and include the gap explanation
   scale_fill_manual(
     values = c(
       "Gap" = "lightgray",
@@ -1208,17 +1202,19 @@ cascade_plot <- long_data |>
     strip.text = element_text(face = "bold", size = 12, color = "black"),
     axis.text = element_text(size = 10),  # Adjust text size for readability
     axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10),
+    axis.text.y = element_text(size = 12),
     axis.title.x = element_blank(),
     axis.title.y = element_blank(),
-    legend.position = "bottom",  # Position legend at the bottom
+    legend.position = "bottom",  # Conditional legend position
+    legend.justification = "center",
     legend.text = element_text(size = 10),
     legend.title = element_blank(),
     panel.grid.major = element_line(size = 0.2),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank()
   ) +
-  scale_x_discrete(labels = scales::label_wrap(10))
+  scale_x_discrete(labels = scales::label_wrap(10)) +
+  guides(fill = guide_legend(direction = "horizontal"))
 
 
 # Save the plot as an image 
@@ -1238,7 +1234,7 @@ cascade_plot <- long_data |>
 ```
 
 ::: {layout-ncol="1"}
-![95-95-95 Cascade](`r cascade_by_kp_age_file_path `)
+![95-95-95 Cascade](`r cascade_by_kp_age_file_path`)
 :::
 
 -   An estimated 86.8%(CI: ) of FSW in `r county` are aware of their HIV status, 86.8% of whom are on ART and 76.9% are virally suppressed.
@@ -1262,9 +1258,10 @@ syphlis <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
          county = case_when(is.na(County) ~ "All",
                             TRUE ~ County) 
          ) |>
+ 
   mutate(
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
-  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
+  upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper)),
   ) |>
  filter(typo != "All") %>%
   select(-Typology, -County) %>%
@@ -1286,6 +1283,7 @@ hebB <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
          county = case_when(is.na(County) ~ "All",
                             TRUE ~ County) 
          ) |>
+ 
   mutate(
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
   upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
@@ -1313,6 +1311,7 @@ hebC <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
          county = case_when(is.na(County) ~ "All",
                             TRUE ~ County) 
          ) |>
+ 
   mutate(
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
   upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
@@ -1341,6 +1340,7 @@ chlamydia <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
          county = case_when(is.na(County) ~ "All",
                             TRUE ~ County) 
          ) |>
+ 
   mutate(
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
   upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
@@ -1365,6 +1365,7 @@ gonorrhea <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
          county = case_when(is.na(County) ~ "All",
                             TRUE ~ County) 
          ) |>
+ 
   mutate(
   lower = if_else(lower < 0, 0, if_else(lower > 100, 100, lower)),
   upper = if_else(upper < 0, 0, if_else(upper > 100, 100, upper))
@@ -1401,7 +1402,8 @@ rename(COUNTY = county) %>%
   filter(!is.na(point)) %>%
   #filter(n > 5) %>%
   filter(Indicator %in% c("Active Infection", "Positive", NA_character_)) |>
-  filter(!(sti %in% c("Hepatitis C") & typo %in% c("MSM", "FSW", "TG")))
+  filter(!(sti %in% c("Hepatitis C") & typo %in% c("MSM", "FSW", "TG"))) %>%
+  filter()
 
 
 # Calculate the maximum percentage and add a buffer
@@ -1426,6 +1428,16 @@ legend_pos <- if (num_typos > 2) "top" else "right"
 # Check if there are records to plot
 if (nrow(sti_data_pos) > 0) {
   
+# Check if any point values are NA
+has_na <- any(is.na(sti_data_pos$point))
+
+# Construct the caption based on the presence of NA values
+caption_text <- ifelse(
+  has_na,
+  "Error bars represent the 95% confidence interval (CI) \n\n *Estimates based on a denominator less than 25 have been suppressed",
+  "Error bars represent the 95% confidence interval (CI) \n\n *Estimates based on a denominator less than 25 have been suppressed"
+)
+  
 
   plot_sti <- ggplot(sti_data_pos, aes(x = typo, 
                                      y = point,
@@ -1443,8 +1455,7 @@ if (nrow(sti_data_pos) > 0) {
             vjust = 0, color = "black", size = 3.5, fontface = "bold") +  # Adjust y position and vjust for label at bar base
   labs(y = "Prevalence (%)",
        x = element_blank(),
-       caption = "Error bars represent the 95% confidence interval (CI). \n
-       * Number suppressed due to small values") +
+       caption = caption_text) +
   theme_minimal() +
   theme(
     axis.title = element_text(size = 10),  
@@ -1536,7 +1547,7 @@ gonorrhea_per <- scales::label_percent(accuracy = 0.1)(gonorrhea_pos/gonorrhea_s
 ```
 
 ::: {layout-ncol="1"}
-![STI prevalence](`r sti_by_kp_age_file_path `)
+![STI prevalence](`r sti_by_kp_age_file_path`)
 
 -   A total of `r scales::comma(hebB_screened)` PWIDS were screened, of whom `r scales::comma(hebB_pos)` (`r hebB_per`) tested positive for Hepatitis B antibodies, and xx PWIDS were confirmed with PCR as positive giving an overall HCV prevalence of xx%.
 
@@ -1655,7 +1666,7 @@ if (nrow(filtered_data) > 0) {
     theme_minimal() +
     geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
               hjust = 0, 
-              color = "black", size = 4, fontface = "bold") +
+              color = "black", size = 3.5, fontface = "bold") +
     scale_fill_manual(values = custom_colors) +
     scale_color_manual(values = custom_colors) +
     theme(
@@ -1663,7 +1674,7 @@ if (nrow(filtered_data) > 0) {
       strip.text = element_text(face = "bold", size = 12, color = "black"),  
       axis.title = element_text(size = 10),  
       axis.text = element_text(size = 10),
-      axis.text.y = element_text(size = 14),
+      axis.text.y = element_text(size = 12),
       axis.text.x = element_text(size = 8),
       legend.position = "none",
       legend.text = element_text(size = 10),
@@ -1691,7 +1702,7 @@ if (nrow(filtered_data) > 0) {
 ```
 
 ::: {layout-ncol="1"}
-![Stigma and discrimination](`r stigma_by_kp_age_file_path `)
+![Stigma and discrimination](`r stigma_by_kp_age_file_path`)
 :::
 
 ### Avoiding Healthcare
@@ -1792,7 +1803,7 @@ if (nrow(filtered_data) > 0) {
                    position = position_dodge(width = 0.75)) +
     facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
-         x = "Percent discriminated due to behavior or gender identity",
+         x = "Percent discriminated due to behavior or identity",
          caption = "Error bars represent the 95% confidence interval (CI)") +
     theme_minimal() +
     geom_text(aes(label = ifelse(is.na(point), 0.0,
@@ -1800,7 +1811,7 @@ if (nrow(filtered_data) > 0) {
                   x = ifelse(point*100 < 10, 0.1, 0.01)
                   ),  # Set x to 0 for centering on axis
               hjust = 0, 
-              color = "black", size = 4, fontface = "bold") +
+              color = "black", size = 3.5, fontface = "bold") +
     scale_fill_manual(values = custom_colors) +
     scale_color_manual(values = custom_colors) +
     theme(
@@ -1808,7 +1819,7 @@ if (nrow(filtered_data) > 0) {
       strip.text = element_text(face = "bold", size = 12, color = "black"),  
       axis.title = element_text(size = 10),  
       axis.text = element_text(size = 10),
-      axis.text.y = element_text(size = 14),
+      axis.text.y = element_text(size = 12),
       axis.text.x = element_text(size = 8),
       legend.position = "none",
       legend.text = element_text(size = 10),
@@ -1837,7 +1848,7 @@ if (nrow(filtered_data) > 0) {
 ```
 
 ::: {layout-ncol="1"}
-![Discrimination](`r hc_discrim_by_kp_age_file_path `)
+![Discrimination](`r hc_discrim_by_kp_age_file_path`)
 :::
 
 ```{r}
@@ -1919,6 +1930,16 @@ facet_rows <- if (num_typos %in% c(1,2,3)) 1 else 2
 # Check if there are records to plot
 if (nrow(filtered_data) > 0) {
   
+  # Check if any point values are NA
+has_na <- any(is.na(filtered_data$point))
+
+# Construct the caption based on the presence of NA values
+caption_text <- ifelse(
+  has_na,
+  "Error bars represent the 95% confidence interval (CI) \n\n * For MSM this refers to avoided HIV services due to fear of exposure",
+  "Error bars represent the 95% confidence interval (CI)"
+)
+  
 
   # Create the plot
 plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_order), 
@@ -1932,8 +1953,7 @@ plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_ord
     facet_wrap(~ typo,  nrow = facet_rows, scales = "fixed") +
     labs(y = NULL, 
          x = "Percent who avoided health care",
-         caption = "Error bars represent the 95% confidence interval (CI) \n
-         *For MSM this refers to avoided HIV services due to fear of exposure") +
+         caption = caption_text) +
     theme_minimal() +
     geom_text(aes(label = format(round(point*100, 1), nsmall = 1), x = 0.01),  # Set x to 0 for centering on axis
               hjust = 0, 
@@ -1945,7 +1965,7 @@ plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_ord
       strip.text = element_text(face = "bold", size = 12, color = "black"),  
       axis.title = element_text(size = 10),  
       axis.text = element_text(size = 10),
-      axis.text.y = element_text(size = 14),
+      axis.text.y = element_text(size = 12),
       axis.text.x = element_text(size = 8),
       legend.position = "none",
       legend.text = element_text(size = 10),
@@ -1972,7 +1992,7 @@ plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_ord
 ```
 
 ::: {layout-ncol="1"}
-![Avoiding Healthcare](`r avoidhc_by_kp_age_file_path `)
+![Avoiding Healthcare](`r avoidhc_by_kp_age_file_path`)
 :::
 
 ## Prevention
@@ -2087,14 +2107,14 @@ if (nrow(filtered_data) > 0) {
             vjust = 0, color = "black", size = 2.5, fontface = "bold") +
       scale_fill_manual(values = custom_colors) +
       scale_color_manual(values = custom_colors) +
-      labs(y = "Access to free condoms (%)", 
+      labs(y = "Access to free condoms(%)", 
            x = NULL,
            caption = "Error bars represent the 95% confidence interval (CI)") +
       theme_minimal() +
       theme(
         strip.text = element_text(face = "bold", size = 10),  
         axis.title = element_text(size = 10),  
-        axis.text = element_text(size = 10),
+        axis.text = element_text(size = 9),
         axis.text.y = element_blank(),
         legend.position = "none",
         legend.text = element_text(size = 10),
@@ -2120,7 +2140,7 @@ if (nrow(filtered_data) > 0) {
 ::: {layout-ncol="2"}
 Access to condoms is crucial for key populations to engage in safer sexual practices and reduce the risk of sexually transmitted infections (STIs). Understanding the level of access to free condoms is crucial for informing effective public health interventions.
 
-![Access to free condoms](`r condoms_by_kp_age_file_path `)
+![Access to free condoms](`r condoms_by_kp_age_file_path`)
 :::
 
 ### Condom Use
@@ -2230,7 +2250,7 @@ if (nrow(condom_use) > 0) {
     strip.text = element_text(face = "bold", size = 12),  
     axis.title = element_text(size = 12),  
     axis.text.x = element_text(size = 12),
-    axis.text.y = element_text(size = 10),
+    axis.text.y = element_text(size = 12),
     panel.grid = element_blank(),
     legend.position = legend_pos,
     legend.title = element_blank(),
@@ -2259,7 +2279,7 @@ if (nrow(condom_use) > 0) {
 ::: {layout-ncol="1"}
 The use of condoms is essential for key populations to engage in safer sexual practices and significantly reduce the risk of sexually transmitted infections (STIs). Promoting consistent condom use is critical for effective public health interventions aimed at minimizing STI transmission
 
-![Condom usage in the last sexual encounter](`r condom_use_file_path `)
+![Condom usage in the last sexual encounter](`r condom_use_file_path`)
 :::
 
 ## PrEP Services
@@ -2402,7 +2422,7 @@ if (nrow(filtered_data) > 0) {
 Overall, knowledge of PrEP is high across all key population subgroups, with the highest awareness among FSW at 94.4%, followed by TG at 89.4%, MSM at 81.5%, and PWID at 63.9%. In terms of those who had ever used PrEP, FSW had the highest proportion at 65.3%, followed by TG at 46.4%, MSM and only 23.0% of PWID had ever been on PrEP. The coverage of PrEP varied across the key population groups with FSW having the highest coverage at 51.3% and lowest among PWID at 14.4%. Approximately one-third of TG individuals and one-quarter of MSM were currently using PrEP.
 
 ::: {layout-ncol="1"}
-![PrEP knowledge and use](`r prep_by_kp_age_file_path `)
+![PrEP knowledge and use](`r prep_by_kp_age_file_path`)
 :::
 
 ### Medication-Assisted Treatment among PWID
@@ -2612,11 +2632,11 @@ if (nrow(filtered_data_oat_two) > 0) {
 ```
 
 ::: {layout-ncol="1"}
-![Medication-Assisted Treatment](`r oat_by_kp_age_file_path `)
+![Medication-Assisted Treatment](`r oat_by_kp_age_file_path`)
 :::
 
 ::: {layout-ncol="1"}
-![Medication-Assisted Treatment](`r oat_by_kp_age_file_path_two `)
+![Medication-Assisted Treatment](`r oat_by_kp_age_file_path_two`)
 :::
 
 ### HIV Testing
@@ -2658,6 +2678,7 @@ hts_long <- hts %>%
 ) %>%
 select(-indicator) %>%
 filter(!is.na(result)) %>%
+dplyr::filter(metric != "Ever tested") %>%
 pivot_wider(names_from = result, values_from  = value)
 
 # Filter and htsare the data
@@ -2752,7 +2773,7 @@ HIV testing is crucial for key populations (KPs) as it serves as the first step 
 Nearly all key population groups had undergone an HIV test within the last three months, in line with guidelines. However, only 41%-55% of individuals reported that their most recent test was conducted during this period.
 
 ::: {layout-ncol="1"}
-![HIV Testing](`r hts_by_kp_age_file_path `)
+![HIV Testing](`r hts_by_kp_age_file_path`)
 :::
 
 ### Ever in contact with a peer outreach worker
@@ -2903,7 +2924,7 @@ if (nrow(filtered_data) > 0) {
 ::: {layout-ncol="2"}
 Approximately 90% of PWIDS had been in contact with an outreach worker, while the contact rates were 64.1% among FSW, 55.6% among TG and 43.9% among MSM. Among those who have ever been in contact with a peer worker, over 90% of PWID, TG, and as well as MSM had been in contact within the last three months, however, only 62,9 % of FSW had been in contact with outreach worker or per educator during the same period.
 
-![Contact with outreach worker](`r peer_by_kp_age_file_path `)
+![Contact with outreach worker](`r peer_by_kp_age_file_path`)
 :::
 
 ## Conclusion
