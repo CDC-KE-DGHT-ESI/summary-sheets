@@ -97,6 +97,7 @@ custom_colors <- c("FSW" = "#1B9E77", "MSM" = "#D95F02",
                    "PWID" = "#7570B3", "TG" = "#E7298A")
 
 
+
 ```
 
 ```{r}
@@ -319,7 +320,7 @@ gtsave(response_rates_table, filename = response_rates_table_file_path,
 
 ```
 
-![](`r response_rates_table_file_path`)
+![](`r response_rates_table_file_path `)
 
 The sample size was achieved for all the key population groups except in PWIDS. Of the 2352 individuals screened, 92% (2154) were found to be eligible. Everyone eligible to participate in the study consented to the interview.
 
@@ -535,7 +536,7 @@ gtsave(prev_supp_pse_table, filename = prev_supp_pse_table_file_path,
 
 ```
 
-![](`r prev_supp_pse_table_file_path`)
+![](`r prev_supp_pse_table_file_path `)
 
 HIV prevalence is highest among the TG (25.5%) and lowest among the PWIDS (10.3%). The prevalence for MSM is 18.7% and FSW 21.9%. HIV Viral load suppression rate is highest among TG at 82.3% while PWID, MSM, and FSW suppression rates are 78.8%, 76.9%, and 77.7% respectively. Population size estimates are 8386 among FSW, 2906 among MSM, 2811 among PWID, and 1524 among TG.
 
@@ -670,7 +671,7 @@ ggsave(filename = demographics_distribution_path,
 ```
 
 ::: {layout-ncol="1"}
-![Age distribution of respondents by key population group](`r demographics_distribution_path`)
+![Age distribution of respondents by key population group](`r demographics_distribution_path `)
 :::
 
 -   FSW: The median age of FSWs is around `r fsw_median_age` `r fsw_iqr_age` years.
@@ -972,13 +973,13 @@ combined_plot_age_file_path <- paste0(directory2, county, "_200_plot.png")
 ### HIV Prevalence by Key Population Group and Age
 
 ::: {layout-ncol="1"}
-![HIV Prevalence](`r prevalence_by_kp_age_file_path`)
+![HIV Prevalence](`r prevalence_by_kp_age_file_path `)
 :::
 
 ### Viral Load suppression by Key Population Group and Age
 
 ::: {layout-ncol="1"}
-![Viral load suppression](`r suppression_200_by_kp_age_file_path`)
+![Viral load suppression](`r suppression_200_by_kp_age_file_path `)
 :::
 
 Viral suppression increased with age across all the key population groups except in TG, where it was lowest among individuals aged 45 years and above
@@ -1234,7 +1235,7 @@ cascade_plot <- long_data |>
 ```
 
 ::: {layout-ncol="1"}
-![95-95-95 Cascade](`r cascade_by_kp_age_file_path`)
+![95-95-95 Cascade](`r cascade_by_kp_age_file_path `)
 :::
 
 -   An estimated 86.8%(CI: ) of FSW in `r county` are aware of their HIV status, 86.8% of whom are on ART and 76.9% are virally suppressed.
@@ -1251,8 +1252,8 @@ cascade_plot <- long_data |>
 #| warning: false
 
 
-syphlis <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
-                         sheet = "Syphilis-Active") |>
+syphlis <- rio::import("data/Results/STI/STI Analysis Results_08_06_2025.xlsx",
+                         sheet = "Syphilis_Active") |>
   mutate(typo = case_when(is.na(Typology) ~ "All",
                           TRUE ~ Typology),
          county = case_when(is.na(County) ~ "All",
@@ -1276,8 +1277,8 @@ rename(Indicator = Syphilis) %>%
 mutate(sti = "Syphilis") 
 
 ##
-hebB <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
-                         sheet = "Hepatitis B-Active") |>
+hebB <- rio::import("data/Results/STI/STI Analysis Results_08_06_2025.xlsx",
+                         sheet = "HepB_Active") |>
   mutate(typo = case_when(is.na(Typology) ~ "All",
                           TRUE ~ Typology),
          county = case_when(is.na(County) ~ "All",
@@ -1297,15 +1298,15 @@ filter(typo != "All") %>%
     lower = lower/100,
     upper = upper/100
   ) %>%
-rename(Indicator = `Eligible_hepB`) %>%
-mutate(Indicator = case_when(is.na(Indicator) ~ "Positive",
-                             TRUE ~ NA_character_)) %>%
+rename(Indicator = `Hepatitis B`) %>%
+mutate(Indicator = case_when(is.na(Indicator) ~ NA_character_,
+                             TRUE ~ Indicator)) %>%
 mutate(sti = "Hepatitis B") %>%
 filter(!is.na(Indicator))
 
 ##
-hebC <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
-                         sheet = "Hepatitis C-Active") |>
+hebC <- rio::import("data/Results/STI/STI Analysis Results_08_06_2025.xlsx",
+                         sheet = "Hepc_active") |>
   mutate(typo = case_when(is.na(Typology) ~ "All",
                           TRUE ~ Typology),
          county = case_when(is.na(County) ~ "All",
@@ -1325,15 +1326,15 @@ filter(typo != "All") %>%
     lower = lower/100,
     upper = upper/100
   ) %>%
-rename(Indicator = `Eligible_hepC`) %>%
-mutate(Indicator = case_when(is.na(Indicator) ~ "Positive",
-                             TRUE ~ NA_character_)) %>%
+rename(Indicator = `Hepatitis C`) %>%
+mutate(Indicator = case_when(is.na(Indicator) ~ NA_character_,
+                             TRUE ~Indicator)) %>%
 mutate(sti = "Hepatitis C")%>%
 filter(!is.na(Indicator))
 
 
 ##
-chlamydia <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
+chlamydia <- rio::import("data/Results/STI/STI Analysis Results_08_06_2025.xlsx",
                          sheet = "Chlamydia") |>
   mutate(typo = case_when(is.na(Typology) ~ "All",
                           TRUE ~ Typology),
@@ -1358,8 +1359,8 @@ rename(Indicator = `Chlamydia`) %>%
 mutate(sti = "Chlamydia")
 
 ##
-gonorrhea <- rio::import("data/Results/STI/STI Analysis Results_17102024.xlsx",
-                         sheet = "Gonorrhea") |>
+gonorrhea <- rio::import("data/Results/STI/STI Analysis Results_08_06_2025.xlsx",
+                         sheet = "Gonorhea") |>
   mutate(typo = case_when(is.na(Typology) ~ "All",
                           TRUE ~ Typology),
          county = case_when(is.na(County) ~ "All",
@@ -1547,7 +1548,7 @@ gonorrhea_per <- scales::label_percent(accuracy = 0.1)(gonorrhea_pos/gonorrhea_s
 ```
 
 ::: {layout-ncol="1"}
-![STI prevalence](`r sti_by_kp_age_file_path`)
+![STI prevalence](`r sti_by_kp_age_file_path `)
 
 -   A total of `r scales::comma(hebB_screened)` PWIDS were screened, of whom `r scales::comma(hebB_pos)` (`r hebB_per`) tested positive for Hepatitis B antibodies, and xx PWIDS were confirmed with PCR as positive giving an overall HCV prevalence of xx%.
 
@@ -1702,7 +1703,7 @@ if (nrow(filtered_data) > 0) {
 ```
 
 ::: {layout-ncol="1"}
-![Stigma and discrimination](`r stigma_by_kp_age_file_path`)
+![Stigma and discrimination](`r stigma_by_kp_age_file_path `)
 :::
 
 ### Avoiding Healthcare
@@ -1848,7 +1849,7 @@ if (nrow(filtered_data) > 0) {
 ```
 
 ::: {layout-ncol="1"}
-![Discrimination](`r hc_discrim_by_kp_age_file_path`)
+![Discrimination](`r hc_discrim_by_kp_age_file_path `)
 :::
 
 ```{r}
@@ -1992,7 +1993,7 @@ plot_avoidhc <- ggplot(filtered_data, aes(y = factor(metric, levels = metric_ord
 ```
 
 ::: {layout-ncol="1"}
-![Avoiding Healthcare](`r avoidhc_by_kp_age_file_path`)
+![Avoiding Healthcare](`r avoidhc_by_kp_age_file_path `)
 :::
 
 ## Prevention
@@ -2140,7 +2141,7 @@ if (nrow(filtered_data) > 0) {
 ::: {layout-ncol="2"}
 Access to condoms is crucial for key populations to engage in safer sexual practices and reduce the risk of sexually transmitted infections (STIs). Understanding the level of access to free condoms is crucial for informing effective public health interventions.
 
-![Access to free condoms](`r condoms_by_kp_age_file_path`)
+![Access to free condoms](`r condoms_by_kp_age_file_path `)
 :::
 
 ### Condom Use
@@ -2279,7 +2280,7 @@ if (nrow(condom_use) > 0) {
 ::: {layout-ncol="1"}
 The use of condoms is essential for key populations to engage in safer sexual practices and significantly reduce the risk of sexually transmitted infections (STIs). Promoting consistent condom use is critical for effective public health interventions aimed at minimizing STI transmission
 
-![Condom usage in the last sexual encounter](`r condom_use_file_path`)
+![Condom usage in the last sexual encounter](`r condom_use_file_path `)
 :::
 
 ## PrEP Services
@@ -2422,7 +2423,7 @@ if (nrow(filtered_data) > 0) {
 Overall, knowledge of PrEP is high across all key population subgroups, with the highest awareness among FSW at 94.4%, followed by TG at 89.4%, MSM at 81.5%, and PWID at 63.9%. In terms of those who had ever used PrEP, FSW had the highest proportion at 65.3%, followed by TG at 46.4%, MSM and only 23.0% of PWID had ever been on PrEP. The coverage of PrEP varied across the key population groups with FSW having the highest coverage at 51.3% and lowest among PWID at 14.4%. Approximately one-third of TG individuals and one-quarter of MSM were currently using PrEP.
 
 ::: {layout-ncol="1"}
-![PrEP knowledge and use](`r prep_by_kp_age_file_path`)
+![PrEP knowledge and use](`r prep_by_kp_age_file_path `)
 :::
 
 ### Medication-Assisted Treatment among PWID
@@ -2632,11 +2633,11 @@ if (nrow(filtered_data_oat_two) > 0) {
 ```
 
 ::: {layout-ncol="1"}
-![Medication-Assisted Treatment](`r oat_by_kp_age_file_path`)
+![Medication-Assisted Treatment](`r oat_by_kp_age_file_path `)
 :::
 
 ::: {layout-ncol="1"}
-![Medication-Assisted Treatment](`r oat_by_kp_age_file_path_two`)
+![Medication-Assisted Treatment](`r oat_by_kp_age_file_path_two `)
 :::
 
 ### HIV Testing
@@ -2773,7 +2774,7 @@ HIV testing is crucial for key populations (KPs) as it serves as the first step 
 Nearly all key population groups had undergone an HIV test within the last three months, in line with guidelines. However, only 41%-55% of individuals reported that their most recent test was conducted during this period.
 
 ::: {layout-ncol="1"}
-![HIV Testing](`r hts_by_kp_age_file_path`)
+![HIV Testing](`r hts_by_kp_age_file_path `)
 :::
 
 ### Ever in contact with a peer outreach worker
@@ -2924,7 +2925,7 @@ if (nrow(filtered_data) > 0) {
 ::: {layout-ncol="2"}
 Approximately 90% of PWIDS had been in contact with an outreach worker, while the contact rates were 64.1% among FSW, 55.6% among TG and 43.9% among MSM. Among those who have ever been in contact with a peer worker, over 90% of PWID, TG, and as well as MSM had been in contact within the last three months, however, only 62,9 % of FSW had been in contact with outreach worker or per educator during the same period.
 
-![Contact with outreach worker](`r peer_by_kp_age_file_path`)
+![Contact with outreach worker](`r peer_by_kp_age_file_path `)
 :::
 
 ## Conclusion
