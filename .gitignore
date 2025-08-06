@@ -15,6 +15,13 @@ cheats/
 .DS_Store
 
 # Ignore reports (.docx)
+BBS_REPORT_*
 BBS_REPORT*
 Summary Sheets*
 Updated*
+summary-sheets.docx
+
+# Handle temporary files to prevent tracking temp files
+~$*.docx
+# or on terminal echo "~$*.docx" >> .gitignore
+~*.docx
